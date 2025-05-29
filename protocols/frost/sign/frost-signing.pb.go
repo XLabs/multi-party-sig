@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: protob/frost-signing.proto
+// source: proto/frost-signing.proto
 
 package sign
 
@@ -32,7 +32,7 @@ type Broadcast2 struct {
 
 func (x *Broadcast2) Reset() {
 	*x = Broadcast2{}
-	mi := &file_protob_frost_signing_proto_msgTypes[0]
+	mi := &file_proto_frost_signing_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +44,7 @@ func (x *Broadcast2) String() string {
 func (*Broadcast2) ProtoMessage() {}
 
 func (x *Broadcast2) ProtoReflect() protoreflect.Message {
-	mi := &file_protob_frost_signing_proto_msgTypes[0]
+	mi := &file_proto_frost_signing_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +57,7 @@ func (x *Broadcast2) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Broadcast2.ProtoReflect.Descriptor instead.
 func (*Broadcast2) Descriptor() ([]byte, []int) {
-	return file_protob_frost_signing_proto_rawDescGZIP(), []int{0}
+	return file_proto_frost_signing_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Broadcast2) GetDi() []byte {
@@ -83,7 +83,7 @@ type Broadcast3 struct {
 
 func (x *Broadcast3) Reset() {
 	*x = Broadcast3{}
-	mi := &file_protob_frost_signing_proto_msgTypes[1]
+	mi := &file_proto_frost_signing_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -95,7 +95,7 @@ func (x *Broadcast3) String() string {
 func (*Broadcast3) ProtoMessage() {}
 
 func (x *Broadcast3) ProtoReflect() protoreflect.Message {
-	mi := &file_protob_frost_signing_proto_msgTypes[1]
+	mi := &file_proto_frost_signing_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -108,7 +108,7 @@ func (x *Broadcast3) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Broadcast3.ProtoReflect.Descriptor instead.
 func (*Broadcast3) Descriptor() ([]byte, []int) {
-	return file_protob_frost_signing_proto_rawDescGZIP(), []int{1}
+	return file_proto_frost_signing_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Broadcast3) GetZi() []byte {
@@ -118,38 +118,37 @@ func (x *Broadcast3) GetZi() []byte {
 	return nil
 }
 
-var File_protob_frost_signing_proto protoreflect.FileDescriptor
+var File_proto_frost_signing_proto protoreflect.FileDescriptor
 
-const file_protob_frost_signing_proto_rawDesc = "" +
+const file_proto_frost_signing_proto_rawDesc = "" +
 	"\n" +
-	"\x1aprotob/frost-signing.proto\x12\x0ebinance.tsslib\",\n" +
+	"\x19proto/frost-signing.proto\x12\x10xlabs.frost.sign\",\n" +
 	"\n" +
 	"Broadcast2\x12\x0e\n" +
 	"\x02Di\x18\x01 \x01(\fR\x02Di\x12\x0e\n" +
 	"\x02Ei\x18\x02 \x01(\fR\x02Ei\"\x1c\n" +
 	"\n" +
 	"Broadcast3\x12\x0e\n" +
-	"\x02Zi\x18\x01 \x01(\fR\x02ZiB\fZ\n" +
-	"frost/signb\x06proto3"
+	"\x02Zi\x18\x01 \x01(\fR\x02ZiB\x16Z\x14protocols/frost/signb\x06proto3"
 
 var (
-	file_protob_frost_signing_proto_rawDescOnce sync.Once
-	file_protob_frost_signing_proto_rawDescData []byte
+	file_proto_frost_signing_proto_rawDescOnce sync.Once
+	file_proto_frost_signing_proto_rawDescData []byte
 )
 
-func file_protob_frost_signing_proto_rawDescGZIP() []byte {
-	file_protob_frost_signing_proto_rawDescOnce.Do(func() {
-		file_protob_frost_signing_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protob_frost_signing_proto_rawDesc), len(file_protob_frost_signing_proto_rawDesc)))
+func file_proto_frost_signing_proto_rawDescGZIP() []byte {
+	file_proto_frost_signing_proto_rawDescOnce.Do(func() {
+		file_proto_frost_signing_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_frost_signing_proto_rawDesc), len(file_proto_frost_signing_proto_rawDesc)))
 	})
-	return file_protob_frost_signing_proto_rawDescData
+	return file_proto_frost_signing_proto_rawDescData
 }
 
-var file_protob_frost_signing_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_protob_frost_signing_proto_goTypes = []any{
-	(*Broadcast2)(nil), // 0: binance.tsslib.Broadcast2
-	(*Broadcast3)(nil), // 1: binance.tsslib.Broadcast3
+var file_proto_frost_signing_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_frost_signing_proto_goTypes = []any{
+	(*Broadcast2)(nil), // 0: xlabs.frost.sign.Broadcast2
+	(*Broadcast3)(nil), // 1: xlabs.frost.sign.Broadcast3
 }
-var file_protob_frost_signing_proto_depIdxs = []int32{
+var file_proto_frost_signing_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
 	0, // [0:0] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -157,26 +156,26 @@ var file_protob_frost_signing_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_protob_frost_signing_proto_init() }
-func file_protob_frost_signing_proto_init() {
-	if File_protob_frost_signing_proto != nil {
+func init() { file_proto_frost_signing_proto_init() }
+func file_proto_frost_signing_proto_init() {
+	if File_proto_frost_signing_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protob_frost_signing_proto_rawDesc), len(file_protob_frost_signing_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_frost_signing_proto_rawDesc), len(file_proto_frost_signing_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_protob_frost_signing_proto_goTypes,
-		DependencyIndexes: file_protob_frost_signing_proto_depIdxs,
-		MessageInfos:      file_protob_frost_signing_proto_msgTypes,
+		GoTypes:           file_proto_frost_signing_proto_goTypes,
+		DependencyIndexes: file_proto_frost_signing_proto_depIdxs,
+		MessageInfos:      file_proto_frost_signing_proto_msgTypes,
 	}.Build()
-	File_protob_frost_signing_proto = out.File
-	file_protob_frost_signing_proto_goTypes = nil
-	file_protob_frost_signing_proto_depIdxs = nil
+	File_proto_frost_signing_proto = out.File
+	file_proto_frost_signing_proto_goTypes = nil
+	file_proto_frost_signing_proto_depIdxs = nil
 }
