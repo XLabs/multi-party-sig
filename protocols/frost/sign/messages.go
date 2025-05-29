@@ -1,8 +1,8 @@
 package sign
 
 import (
-	"github.com/xlabs/multi-party-sig/internal/round"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/round"
 )
 
 func NewBroadcast2(Di, Ei curve.Point) (round.Content, error) {

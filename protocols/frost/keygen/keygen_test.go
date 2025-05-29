@@ -6,11 +6,11 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/xlabs/multi-party-sig/internal/round"
 	"github.com/xlabs/multi-party-sig/internal/test"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
 	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/round"
 	common "github.com/xlabs/tss-common"
 )
 

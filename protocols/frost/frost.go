@@ -3,10 +3,10 @@ package frost
 import (
 	"fmt"
 
-	"github.com/xlabs/multi-party-sig/internal/round"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/protocol"
+	"github.com/xlabs/multi-party-sig/pkg/round"
 	"github.com/xlabs/multi-party-sig/protocols/frost/keygen"
 	"github.com/xlabs/multi-party-sig/protocols/frost/sign"
 	common "github.com/xlabs/tss-common"

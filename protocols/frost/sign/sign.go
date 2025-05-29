@@ -3,9 +3,9 @@ package sign
 import (
 	"fmt"
 
-	"github.com/xlabs/multi-party-sig/internal/round"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/protocol"
+	"github.com/xlabs/multi-party-sig/pkg/round"
 	"github.com/xlabs/multi-party-sig/protocols/frost/keygen"
 	common "github.com/xlabs/tss-common"
 )

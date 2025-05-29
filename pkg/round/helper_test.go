@@ -3,10 +3,10 @@ package round_test
 import (
 	"testing"
 
-	"github.com/xlabs/multi-party-sig/internal/round"
 	"github.com/xlabs/multi-party-sig/internal/test"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/round"
 )
 
 func TestNewSession(t *testing.T) {

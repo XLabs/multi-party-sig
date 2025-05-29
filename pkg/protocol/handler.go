@@ -7,9 +7,9 @@ import (
 	"sync"
 
 	"github.com/fxamacker/cbor/v2"
-	"github.com/xlabs/multi-party-sig/internal/round"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
 	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/round"
 	common "github.com/xlabs/tss-common"
 )
 

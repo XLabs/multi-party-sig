@@ -3,10 +3,10 @@ package sign
 import (
 	"crypto/rand"
 
-	"github.com/xlabs/multi-party-sig/internal/round"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/round"
 	common "github.com/xlabs/tss-common"
 
 	"github.com/zeebo/blake3"

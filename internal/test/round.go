@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/xlabs/multi-party-sig/internal/round"
 	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/round"
 	common "github.com/xlabs/tss-common"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
