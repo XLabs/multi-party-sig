@@ -8,9 +8,11 @@ import (
 
 	"github.com/xlabs/multi-party-sig/internal/types"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
-	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/pool"
+
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	common "github.com/xlabs/tss-common"
 )
 
 // Helper implements Session without Round, and can therefore be embedded in the first round of a protocol
@@ -138,14 +140,15 @@ func (h *Helper) UpdateHashState(value hash.WriterToWithDomain) {
 
 // BroadcastMessage constructs a Message from the broadcast Content, and sets the header correctly.
 // An error is returned if the message cannot be sent to the out channel.
-func (h *Helper) BroadcastMessage(out chan<- *Message, broadcastContent Content) error {
+func (h *Helper) BroadcastMessage(out chan<- common.ParsedMessage, broadcastContent Content) error {
 	msg := &Message{
-		From:      h.info.SelfID,
-		Broadcast: true,
-		Content:   broadcastContent,
+		From:       h.info.SelfID,
+		Broadcast:  true,
+		Content:    broadcastContent,
+		TrackingID: h.info.TrackingID,
 	}
 	select {
-	case out <- msg:
+	case out <- msg.ToParsed():
 		return nil
 	default:
 		return ErrOutChanFull
@@ -156,14 +159,17 @@ func (h *Helper) BroadcastMessage(out chan<- *Message, broadcastContent Content)
 // intended for all participants (but does not require reliable broadcast), the `to` field may be empty ("").
 // Returns an error if the message failed to send over out channel.
 // `out` is expected to be a buffered channel with enough capacity to store all messages.
-func (h *Helper) SendMessage(out chan<- *Message, content Content, to party.ID) error {
+func (h *Helper) SendMessage(out chan<- common.ParsedMessage, content Content, to party.ID) error {
 	msg := &Message{
-		From:    h.info.SelfID,
-		To:      to,
-		Content: content,
+		From:       h.info.SelfID,
+		To:         to,
+		Content:    content,
+		Broadcast:  false,
+		TrackingID: h.info.TrackingID,
 	}
+
 	select {
-	case out <- msg:
+	case out <- msg.ToParsed():
 		return nil
 	default:
 		return ErrOutChanFull

@@ -6,7 +6,9 @@ import (
 
 	"github.com/cronokirby/saferith"
 	"github.com/fxamacker/cbor/v2"
+
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	common "github.com/xlabs/tss-common"
 )
 
 // ID represents a unique identifier for a participant in our scheme.
@@ -17,6 +19,21 @@ import (
 //
 // This ID is used as an interpolation point of a polynomial sharing of the secret key.
 type ID string
+
+func FromTssID(pid *common.PartyID) ID {
+	// TODO: make a concat of the key and id, and be able to convert the two perfectly.
+	return ID(pid.Id)
+}
+
+// TODO:
+func (id ID) ToTssPartyID() *common.PartyID {
+	return &common.PartyID{
+		MessageWrapper_PartyID: &common.MessageWrapper_PartyID{
+			Id:  string(id),
+			Key: []byte(id),
+		},
+	}
+}
 
 // Scalar converts this ID into a scalar.
 //

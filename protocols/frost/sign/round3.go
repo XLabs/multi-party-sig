@@ -7,6 +7,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/taproot"
+	common "github.com/xlabs/tss-common"
 )
 
 // This corresponds with step 7 of Figure 3 in the Frost paper:
@@ -44,37 +45,54 @@ type broadcast3 struct {
 // StoreBroadcastMessage implements round.BroadcastRound.
 func (r *round3) StoreBroadcastMessage(msg round.Message) error {
 	from := msg.From
-	body, ok := msg.Content.(*broadcast3)
+	body, ok := msg.Content.(*Broadcast3)
 	if !ok || body == nil {
 		return round.ErrInvalidContent
 	}
 
-	// check nil
-	if body.Z_i == nil {
-		return round.ErrNilFields
+	if !body.ValidateBasic() {
+		return round.ErrInvalidContent
 	}
 
-	// These steps come from Figure 3 of the Frost paper.
+	Zi := r.Group().NewScalar()
+	if err := Zi.UnmarshalBinary(body.Zi); err != nil {
+		return fmt.Errorf("failed to unmarshal zᵢ: %w", err)
+	}
 
-	// 7.b "Verify the validity of each response by checking
-	//
-	//    zᵢ • G = Rᵢ + c * λᵢ * Yᵢ
-	//
-	// for each share zᵢ, i in S. If the equality does not hold, identify and report the
-	// misbehaving participant, and then abort. Otherwise, continue."
-	//
-	// Note that step 7.a is an artifact of having a signing authority. In our case,
-	// we've already computed everything that step computes.
+	var expected, actual curve.Point
+	if r.taproot {
+		// These steps come from Figure 3 of the Frost paper.
 
-	expected := r.c.Act(r.Lambda[from].Act(r.YShares[from])).Add(r.RShares[from])
+		// 7.b "Verify the validity of each response by checking
+		//
+		//    zᵢ • G = Rᵢ + c * λᵢ * Yᵢ
+		//
+		// for each share zᵢ, i in S. If the equality does not hold, identify and report the
+		// misbehaving participant, and then abort. Otherwise, continue."
+		//
+		// Note that step 7.a is an artifact of having a signing authority. In our case,
+		// we've already computed everything that step computes.
+		expected = r.c.Act(r.Lambda[from].Act(r.YShares[from])).Add(r.RShares[from])
 
-	actual := body.Z_i.ActOnBase()
+		actual = Zi.ActOnBase()
+
+	} else {
+		left := r.c.Act(r.Lambda[from].Act(r.YShares[from]))
+		right := r.RShares[from]
+		expected = left.Sub(right)
+
+		// z_i = (λᵢ sᵢ c) - [dᵢ + (eᵢ ρᵢ)] here.
+		actual = Zi.ActOnBase() // z_i*G = [ C * λᵢ *si  - (di +ei*rhoi)]G=
+		// 							 (C * λᵢ *si)G  - (di +ei*rhoi)G =
+		// 							 (C * λᵢ)Yᵢ - (di +ei*rhoi)G=
+		// 							 (C * λᵢ)Yᵢ - Rshares[i]
+	}
 
 	if !actual.Equal(expected) {
-		return fmt.Errorf("failed to verify response from %v", from)
+		return fmt.Errorf("round3: failed to verify response from %v", from)
 	}
 
-	r.z[from] = body.Z_i
+	r.z[from] = Zi
 
 	return nil
 }
@@ -85,14 +103,46 @@ func (round3) VerifyMessage(round.Message) error { return nil }
 // StoreMessage implements round.Round.
 func (round3) StoreMessage(round.Message) error { return nil }
 
+func (r *round3) CanFinalize() bool {
+	// Rshares, z lambda:
+	t := r.Threshold() + 1
+
+	if len(r.RShares) < t || len(r.z) < t || len(r.Lambda) < t {
+		return false
+	}
+
+	// check we received from all participants:
+	for _, l := range r.OtherPartyIDs() {
+		if _, ok := r.RShares[l]; !ok {
+			return false
+		}
+
+		if _, ok := r.z[l]; !ok {
+			return false
+		}
+
+		if _, ok := r.Lambda[l]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Finalize implements round.Round.
-func (r *round3) Finalize(chan<- *round.Message) (round.Session, error) {
+func (r *round3) Finalize(chan<- common.ParsedMessage) (round.Session, error) {
 	// These steps come from Figure 3 of the Frost paper.
 
 	// 7.c "Compute the group's response z = ∑ᵢ zᵢ"
 	z := r.Group().NewScalar()
 	for _, z_l := range r.z {
 		z.Add(z_l)
+	}
+
+	if !r.taproot {
+		// in non-taproot mode, we need to negate the response, so
+		// we receive a response where z corresponds to the eth-contract signature value s = k - x*challenge.
+		z = z.Negate()
 	}
 
 	// The format of our signature depends on using taproot, naturally
@@ -115,11 +165,11 @@ func (r *round3) Finalize(chan<- *round.Message) (round.Session, error) {
 	} else {
 		sig := Signature{
 			R: r.R,
-			z: z,
+			Z: z,
 		}
 
-		if !sig.Verify(r.Y, r.M) {
-			return r.AbortRound(fmt.Errorf("generated signature failed to verify")), nil
+		if err := sig.Verify(r.Y, r.M); err != nil {
+			return r.AbortRound(fmt.Errorf("generated signature failed to verify: %w", err)), nil
 		}
 
 		return r.ResultRound(sig), nil
@@ -134,8 +184,10 @@ func (broadcast3) RoundNumber() round.Number { return 3 }
 
 // BroadcastContent implements round.BroadcastRound.
 func (r *round3) BroadcastContent() round.BroadcastContent {
-	return &broadcast3{
-		Z_i: r.Group().NewScalar(),
+	s, _ := r.Group().NewScalar().MarshalBinary()
+
+	return &Broadcast3{
+		Zi: s,
 	}
 }
 

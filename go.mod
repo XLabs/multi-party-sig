@@ -17,6 +17,10 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/xlabs/tss-common v0.0.0-00010101000000-000000000000 // indirect
 	golang.org/x/sys v0.9.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/xlabs/tss-common => /Users/jonathanweiss/gits/xlabs/tss-common

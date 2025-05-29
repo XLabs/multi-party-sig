@@ -9,6 +9,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
 	"github.com/xlabs/multi-party-sig/pkg/party"
+	common "github.com/xlabs/tss-common"
 )
 
 // This round corresponds with steps 2-4 of Round 2, Figure 1 in the Frost paper:
@@ -39,33 +40,35 @@ type broadcast3 struct {
 // StoreBroadcastMessage implements round.BroadcastRound.
 func (r *round3) StoreBroadcastMessage(msg round.Message) error {
 	from := msg.From
-	body, ok := msg.Content.(*broadcast3)
-	if !ok || body == nil {
+	body, ok := msg.Content.(*Broadcast3)
+	if !ok || !body.ValidateBasic() {
 		return round.ErrInvalidContent
 	}
 
-	if err := body.C_l.Validate(); err != nil {
+	C_l := types.RID(body.Cl)
+
+	if err := C_l.Validate(); err != nil {
 		return err
 	}
 
 	// Verify that the commitment to the chain key contribution matches, and then xor
 	// it into the accumulated chain key so far.
-	if !r.HashForID(from).Decommit(r.ChainKeyCommitments[from], body.Decommitment, body.C_l) {
+	if !r.HashForID(from).Decommit(r.ChainKeyCommitments[from], body.Decommitment, C_l) {
 		return fmt.Errorf("failed to verify chain key commitment")
 	}
-	r.ChainKeys[from] = body.C_l
+	r.ChainKeys[from] = C_l
 	return nil
 }
 
 // VerifyMessage implements round.Round.
 func (r *round3) VerifyMessage(msg round.Message) error {
-	body, ok := msg.Content.(*message3)
-	if !ok || body == nil {
+	body, ok := msg.Content.(*Message3)
+	if !ok || !body.ValidateBasic() {
 		return round.ErrInvalidContent
 	}
 
 	// check nil
-	if body.F_li == nil {
+	if body.FLi == nil {
 		return round.ErrNilFields
 	}
 
@@ -76,7 +79,12 @@ func (r *round3) VerifyMessage(msg round.Message) error {
 //
 // Verify the VSS condition here since we will not be sending this message to other parties for verification.
 func (r *round3) StoreMessage(msg round.Message) error {
-	from, body := msg.From, msg.Content.(*message3)
+	from, body := msg.From, msg.Content.(*Message3)
+
+	F_li := r.Group().NewScalar()
+	if err := F_li.UnmarshalBinary(body.FLi); err != nil {
+		return fmt.Errorf("failed to unmarshal F_li: %w", err)
+	}
 
 	// These steps come from Figure 1, Round 2 of the Frost paper
 
@@ -85,19 +93,44 @@ func (r *round3) StoreMessage(msg round.Message) error {
 	//   fₗ(i) * G =? ∑ₖ₌₀ᵗ (iᵏ mod q) * ϕₗₖ
 	//
 	// aborting if the check fails."
-	expected := body.F_li.ActOnBase()
+	expected := F_li.ActOnBase()
 	actual := r.Phi[from].Evaluate(r.SelfID().Scalar(r.Group()))
 	if !expected.Equal(actual) {
 		return fmt.Errorf("VSS failed to validate")
 	}
 
-	r.shareFrom[from] = body.F_li
+	r.shareFrom[from] = F_li
 
 	return nil
 }
 
+func (r *round3) CanFinalize() bool {
+	// We can finalize if we have received all the messages from the other parties
+	// and we have sent our own message.
+
+	t := r.Threshold() + 1 // t + 1 participants are needed to create a signature
+
+	// received from everyone.
+	if len(r.shareFrom) < t || len(r.ChainKeys) < t {
+		return false
+	}
+
+	// ensure we received from all participants:
+	for _, l := range r.OtherPartyIDs() {
+		if _, ok := r.shareFrom[l]; !ok {
+			return false
+		}
+
+		if _, ok := r.ChainKeys[l]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Finalize implements round.Round.
-func (r *round3) Finalize(chan<- *round.Message) (round.Session, error) {
+func (r *round3) Finalize(chan<- common.ParsedMessage) (round.Session, error) {
 	ChainKey := types.EmptyRID()
 	for _, j := range r.PartyIDs() {
 		ChainKey.XOR(r.ChainKeys[j])
@@ -181,8 +214,10 @@ func (message3) RoundNumber() round.Number { return 3 }
 
 // MessageContent implements round.Round.
 func (r *round3) MessageContent() round.Content {
-	return &message3{
-		F_li: r.Group().NewScalar(),
+	s := r.Group().NewScalar()
+	bts, _ := s.MarshalBinary()
+	return &Message3{
+		FLi: bts,
 	}
 }
 
@@ -190,7 +225,7 @@ func (r *round3) MessageContent() round.Content {
 func (broadcast3) RoundNumber() round.Number { return 3 }
 
 // BroadcastContent implements round.BroadcastRound.
-func (r *round3) BroadcastContent() round.BroadcastContent { return &broadcast3{} }
+func (r *round3) BroadcastContent() round.BroadcastContent { return &Broadcast3{} }
 
 // Number implements round.Round.
 func (round3) Number() round.Number { return 3 }

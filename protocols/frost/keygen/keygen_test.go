@@ -11,7 +11,14 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
 	"github.com/xlabs/multi-party-sig/pkg/party"
+	common "github.com/xlabs/tss-common"
 )
+
+var testTrackingId = &common.TrackingID{
+	Digest:       []byte{1, 2, 4, 5, 6, 70, 19},
+	PartiesState: []byte{},
+	AuxilaryData: []byte{},
+}
 
 func checkOutput(t *testing.T, rounds []round.Session, parties party.IDSlice) {
 	group := curve.Secp256k1{}
@@ -33,7 +40,7 @@ func checkOutput(t *testing.T, rounds []round.Session, parties party.IDSlice) {
 	lagrangeCoefficients := polynomial.Lagrange(group, parties)
 	for _, result := range results {
 		if publicKey != nil {
-			assert.True(t, publicKey.Equal(result.PublicKey), "different public key")
+			assert.True(t, publicKey.Equal(result.PublicKey), "different public key") // everyone share the same public key.
 		}
 		publicKey = result.PublicKey
 		if chainKey != nil {
@@ -76,7 +83,7 @@ func TestKeygen(t *testing.T) {
 
 	rounds := make([]round.Session, 0, N)
 	for _, partyID := range partyIDs {
-		r, err := StartKeygenCommon(false, group, partyIDs, N-1, partyID, nil, nil, nil)(nil)
+		r, err := StartKeygenCommon(false, group, partyIDs, N-1, partyID, nil, nil, nil)(testTrackingId.ToByteString())
 		require.NoError(t, err, "round creation should not result in an error")
 		rounds = append(rounds, r)
 	}
@@ -148,7 +155,7 @@ func TestKeygenTaproot(t *testing.T) {
 
 	rounds := make([]round.Session, 0, N)
 	for _, partyID := range partyIDs {
-		r, err := StartKeygenCommon(true, group, partyIDs, N-1, partyID, nil, nil, nil)(nil)
+		r, err := StartKeygenCommon(true, group, partyIDs, N-1, partyID, nil, nil, nil)(testTrackingId.ToByteString())
 		require.NoError(t, err, "round creation should not result in an error")
 		rounds = append(rounds, r)
 

@@ -4,6 +4,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/hash"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
+	common "github.com/xlabs/tss-common"
 )
 
 type Info struct {
@@ -19,6 +20,8 @@ type Info struct {
 	Threshold int
 	// Group returns the group used for this protocol execution.
 	Group curve.Curve
+
+	TrackingID *common.TrackingID
 }
 
 // Session represents the current execution of a round-based protocol.

@@ -11,6 +11,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/taproot"
+	common "github.com/xlabs/tss-common"
 )
 
 // This round roughly corresponds with steps 3-6 of Figure 3 in the Frost paper:
@@ -36,19 +37,22 @@ type round2 struct {
 	E map[party.ID]curve.Point
 }
 
-type broadcast2 struct {
-	round.ReliableBroadcastContent
-	// D_i is the first commitment produced by the sender of this message.
-	D_i curve.Point
-	// E_i is the second commitment produced by the sender of this message.
-	E_i curve.Point
-}
-
 // StoreBroadcastMessage implements round.BroadcastRound.
 func (r *round2) StoreBroadcastMessage(msg round.Message) error {
-	body, ok := msg.Content.(*broadcast2)
+	body, ok := msg.Content.(*Broadcast2)
 	if !ok || body == nil {
 		return round.ErrInvalidContent
+	}
+
+	Di := r.Group().NewPoint()
+	Ei := r.Group().NewPoint()
+
+	if err := Di.UnmarshalBinary(body.Di); err != nil {
+		return fmt.Errorf("failed to unmarshal Dᵢ: %w", err)
+	}
+
+	if err := Ei.UnmarshalBinary(body.Ei); err != nil {
+		return fmt.Errorf("failed to unmarshal Eᵢ: %w", err)
 	}
 
 	// This section roughly follows Figure 3.
@@ -64,12 +68,13 @@ func (r *round2) StoreBroadcastMessage(msg round.Message) error {
 	//
 	// We also receive each Dₗ, Eₗ from the participant l directly, instead of
 	// an entire bundle from a signing authority.
-	if body.D_i.IsIdentity() || body.E_i.IsIdentity() {
+	if Di.IsIdentity() || Ei.IsIdentity() {
 		return fmt.Errorf("nonce commitment is the identity point")
 	}
 
-	r.D[msg.From] = body.D_i
-	r.E[msg.From] = body.E_i
+	r.D[msg.From] = Di
+	r.E[msg.From] = Ei
+
 	return nil
 }
 
@@ -78,14 +83,34 @@ func (round2) VerifyMessage(round.Message) error { return nil }
 
 // StoreMessage implements round.Round.
 func (round2) StoreMessage(round.Message) error { return nil }
+func (r *round2) CanFinalize() bool {
+	t := r.Threshold() + 1 // t + 1 participants are needed to create a signature
+
+	// received from everyone.
+	if len(r.D) < t || len(r.E) < t {
+		return false
+	}
+
+	// check we received from all participants:
+	for _, l := range r.OtherPartyIDs() {
+		if _, ok := r.D[l]; !ok {
+			return false
+		}
+		if _, ok := r.E[l]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
 
 // Finalize implements round.Round.
-func (r *round2) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	// This essentially follows parts of Figure 3.
 
-	// 4. "Each Pᵢ then computes the set of binding values ρₗ = H₁(l, m, B).
-	// Each Pᵢ then derives the group commitment R = ∑ₗ Dₗ + ρₗ * Eₗ and
-	// the challenge c = H₂(R, Y, m)."
+	// 4. "Each Pᵢ then computes the set of binding values ρₗ = H₁(l, m, B). // l is related to the ID of the players.
+	// Each Pᵢ then derives the group commitment R = ∑ₗ Dₗ + ρₗ * Eₗ and //  R = kG
+	// the challenge c = H₂(Address(R), Y, m)." // Y should be the public key?
 	//
 	// It's easier to calculate H(m, B, l), that way we can simply clone the hash
 	// state after H(m, B), instead of rehashing them each time.
@@ -113,6 +138,7 @@ func (r *round2) Finalize(out chan<- *round.Message) (round.Session, error) {
 		RShares[l] = RShares[l].Add(r.D[l])
 		R = R.Add(RShares[l])
 	}
+	// Rshares[i] = [(ρᵢ * Eᵢ) + Dᵢ]
 	var c curve.Scalar
 	if r.taproot {
 		// BIP-340 adjustment: We need R to have an even y coordinate. This means
@@ -135,20 +161,39 @@ func (r *round2) Finalize(out chan<- *round.Message) (round.Session, error) {
 		cHash := taproot.TaggedHash("BIP0340/challenge", RBytes, PBytes, r.M)
 		c = r.Group().NewScalar().SetNat(new(saferith.Nat).SetBytes(cHash))
 	} else {
-		cHash := hash.New()
-		_ = cHash.WriteAny(R, r.Y, r.M)
-		c = sample.Scalar(cHash.Digest(), r.Group())
+		var err error
+		c, err = makeEthChallenge(R, r.Y, r.M)
+		if err != nil {
+			return r, err
+		}
 	}
 
 	// Lambdas[i] = λᵢ
 	Lambdas := polynomial.Lagrange(r.Group(), r.PartyIDs())
+
+	var z_i curve.Scalar
+	// S in schnorr: s = k + x*C
 	// 5. "Each Pᵢ computes their response using their long-lived secret share sᵢ
-	// by computing zᵢ = dᵢ + (eᵢ ρᵢ) + λᵢ sᵢ c, using S to determine
+	// by computing zᵢ = [dᵢ + (eᵢ ρᵢ)] + λᵢ sᵢ c, using S to determine
 	// the ith lagrange coefficient λᵢ"
-	z_i := r.Group().NewScalar().Set(Lambdas[r.SelfID()]).Mul(r.s_i).Mul(c)
-	z_i.Add(r.d_i)
-	ed := r.Group().NewScalar().Set(rho[r.SelfID()]).Mul(r.e_i)
-	z_i.Add(ed)
+	if r.taproot {
+		z_i = r.Group().NewScalar().Set(Lambdas[r.SelfID()]).Mul(r.s_i).Mul(c)
+		z_i.Add(r.d_i)
+		ed := r.Group().NewScalar().Set(rho[r.SelfID()]).Mul(r.e_i)
+		z_i.Add(ed)
+	} else {
+		//changed to work with smart contracts using ecrecover.
+		// thus z_i = (λᵢ sᵢ c) - [dᵢ + (eᵢ ρᵢ)] here.
+		// we later negate the resulting z to get the schnorr value s = k - x*c
+		z_i = r.Group().NewScalar().Set(Lambdas[r.SelfID()]).Mul(r.s_i).Mul(c)
+
+		// ed == dᵢ + eᵢ ρᵢ
+		ed := r.Group().NewScalar().Set(rho[r.SelfID()]).Mul(r.e_i)
+		ed.Add(r.d_i)
+
+		// zi = λi si c - (di + ei ρi)
+		z_i.Sub(ed)
+	}
 
 	// 6. "Each Pᵢ securely deletes ((dᵢ, Dᵢ), (eᵢ, Eᵢ)) from their local storage,
 	// and returns zᵢ to SA."
@@ -158,8 +203,12 @@ func (r *round2) Finalize(out chan<- *round.Message) (round.Session, error) {
 	// TODO: Securely delete the nonces.
 
 	// Broadcast our response
-	err := r.BroadcastMessage(out, &broadcast3{Z_i: z_i})
+	b, err := NewBroadcast3(z_i)
 	if err != nil {
+		return r, err
+	}
+
+	if err := r.BroadcastMessage(out, b); err != nil {
 		return r, err
 	}
 
@@ -176,15 +225,10 @@ func (r *round2) Finalize(out chan<- *round.Message) (round.Session, error) {
 // MessageContent implements round.Round.
 func (round2) MessageContent() round.Content { return nil }
 
-// RoundNumber implements round.Content.
-func (broadcast2) RoundNumber() round.Number { return 2 }
-
 // BroadcastContent implements round.BroadcastRound.
 func (r *round2) BroadcastContent() round.BroadcastContent {
-	return &broadcast2{
-		D_i: r.Group().NewPoint(),
-		E_i: r.Group().NewPoint(),
-	}
+	b, _ := NewBroadcast2(r.Group().NewPoint(), r.Group().NewPoint())
+	return b
 }
 
 // Number implements round.Round.

@@ -3,6 +3,7 @@ package keygen
 import (
 	"fmt"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/xlabs/multi-party-sig/internal/round"
 	"github.com/xlabs/multi-party-sig/internal/types"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
@@ -10,6 +11,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	sch "github.com/xlabs/multi-party-sig/pkg/zk/sch"
+	common "github.com/xlabs/tss-common"
 )
 
 // This round corresponds with steps 5 of Round 1, 1 of Round 2, Figure 1 in the Frost paper:
@@ -48,9 +50,25 @@ type broadcast2 struct {
 // StoreBroadcastMessage implements round.BroadcastRound.
 func (r *round2) StoreBroadcastMessage(msg round.Message) error {
 	from := msg.From
-	body, ok := msg.Content.(*broadcast2)
-	if !ok || body == nil {
+	tmp, ok := msg.Content.(*Broadcast2)
+	if !ok || !tmp.ValidateBasic() {
 		return round.ErrInvalidContent
+	}
+
+	phii := polynomial.EmptyExponent(r.Group())
+	if err := phii.UnmarshalBinary(tmp.Phii); err != nil {
+		return fmt.Errorf("failed to unmarshal Phi_i: %w", err)
+	}
+
+	sigmai := sch.EmptyProof(r.Group())
+	if err := cbor.Unmarshal(tmp.Sigmai, sigmai); err != nil {
+		return fmt.Errorf("failed to unmarshal Sigma_i: %w", err)
+	}
+
+	body := &broadcast2{
+		Phi_i:      phii,
+		Sigma_i:    sigmai,
+		Commitment: tmp.Commitment,
 	}
 
 	// check nil
@@ -99,24 +117,24 @@ func (round2) VerifyMessage(round.Message) error { return nil }
 // StoreMessage implements round.Round.
 func (round2) StoreMessage(round.Message) error { return nil }
 
-func (r *round2) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	// These steps come from Figure 1, Round 2 of the Frost paper
 
 	// 1. "Each P_i securely sends to each other participant Pₗ a secret share
 	// (l, fᵢ(l)), deleting f_i and each share afterward except for (i, fᵢ(i)),
 	// which they keep for themselves."
 
-	if err := r.BroadcastMessage(out, &broadcast3{
-		C_l:          r.ChainKeys[r.SelfID()],
-		Decommitment: r.ChainKeyDecommitment,
-	}); err != nil {
+	if err := r.BroadcastMessage(out, NewBroadcast3(r.ChainKeys[r.SelfID()], r.ChainKeyDecommitment)); err != nil {
 		return r, err
 	}
 
 	for _, l := range r.OtherPartyIDs() {
-		if err := r.SendMessage(out, &message3{
-			F_li: r.f_i.Evaluate(l.Scalar(r.Group())),
-		}, l); err != nil {
+		msg, err := NewMessage3(r.f_i.Evaluate(l.Scalar(r.Group())))
+		if err != nil {
+			return r, err
+		}
+
+		if err := r.SendMessage(out, msg, l); err != nil {
 			return r, err
 		}
 	}
@@ -128,6 +146,32 @@ func (r *round2) Finalize(out chan<- *round.Message) (round.Session, error) {
 	}, nil
 }
 
+func (r *round2) CanFinalize() bool {
+	// We can finalize if we have received all the messages from the other parties
+	// and we have sent our own message.
+
+	t := r.Threshold() + 1 // t + 1 participants are needed to create a signature
+
+	// received from everyone.
+	// the folowing used in round3: && len(r.ChainKeys) == t
+	if len(r.Phi) < t || len(r.ChainKeyCommitments) < t {
+		return false
+	}
+
+	// check we received from all participants:
+	for _, l := range r.OtherPartyIDs() {
+		if _, ok := r.Phi[l]; !ok {
+			return false
+		}
+
+		if _, ok := r.ChainKeyCommitments[l]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
 // MessageContent implements round.Round.
 func (round2) MessageContent() round.Content { return nil }
 
@@ -136,10 +180,8 @@ func (broadcast2) RoundNumber() round.Number { return 2 }
 
 // BroadcastContent implements round.BroadcastRound.
 func (r *round2) BroadcastContent() round.BroadcastContent {
-	return &broadcast2{
-		Phi_i:   polynomial.EmptyExponent(r.Group()),
-		Sigma_i: sch.EmptyProof(r.Group()),
-	}
+	b, _ := NewBroadcast2(polynomial.EmptyExponent(r.Group()), sch.EmptyProof(r.Group()), hash.Commitment{})
+	return b
 }
 
 // Number implements round.Round.

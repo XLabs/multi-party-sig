@@ -1,5 +1,7 @@
 package round
 
+import common "github.com/xlabs/tss-common"
+
 type Round interface {
 	// VerifyMessage handles an incoming Message and validates its content with regard to the protocol specification.
 	// The content argument can be cast to the appropriate type for this round without error check.
@@ -23,15 +25,19 @@ type Round interface {
 	// In the last round, Finalize should return
 	//   r.ResultRound(result), nil
 	// where result is the output of the protocol.
-	Finalize(out chan<- *Message) (Session, error)
+	Finalize(out chan<- common.ParsedMessage) (Session, error)
 
 	// MessageContent returns an uninitialized message.Content for this round.
 	//
 	// The first round of a protocol should return nil.
+	// can be used to unmarshal specific messages.
 	MessageContent() Content
 
 	// Number returns the current round number.
 	Number() Number
+
+	// checks whether all messages have been received for this round.
+	CanFinalize() bool
 }
 
 // BroadcastRound extends Round in that it expects a broadcast message before the p2p message.

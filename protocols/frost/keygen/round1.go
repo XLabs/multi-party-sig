@@ -12,6 +12,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	zksch "github.com/xlabs/multi-party-sig/pkg/zk/sch"
+	common "github.com/xlabs/tss-common"
 )
 
 // This round corresponds with the steps 1-4 of Round 1, Figure 1 in the Frost paper:
@@ -55,11 +56,15 @@ func (r *round1) VerifyMessage(round.Message) error { return nil }
 // StoreMessage implements round.Round.
 func (r *round1) StoreMessage(round.Message) error { return nil }
 
+func (r *round1) CanFinalize() bool {
+	return true
+}
+
 // Finalize implements round.Round.
 //
 // The overall goal of this round is to generate a secret value, create a polynomial
 // sharing of that value, and then send commitments to these values.
-func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	group := r.Group()
 	// These steps come from Figure 1, Round 1 of the Frost paper.
 
@@ -121,12 +126,13 @@ func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
 		return r, fmt.Errorf("failed to commit to chain key")
 	}
 
+	b, err := NewBroadcast2(Phi_i, Sigma_i, commitment)
+	if err != nil {
+		return r, fmt.Errorf("failed to create broadcast message: %w", err)
+	}
+
 	// 4. "Every Pᵢ broadcasts Φᵢ, σᵢ to all other participants
-	err = r.BroadcastMessage(out, &broadcast2{
-		Phi_i:      Phi_i,
-		Sigma_i:    Sigma_i,
-		Commitment: commitment,
-	})
+	err = r.BroadcastMessage(out, b)
 	if err != nil {
 		return r, err
 	}
