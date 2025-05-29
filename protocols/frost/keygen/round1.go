@@ -143,7 +143,7 @@ func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 		Phi:                  map[party.ID]*polynomial.Exponent{r.SelfID(): Phi_i},
 		ChainKeys:            map[party.ID]types.RID{r.SelfID(): c_i},
 		ChainKeyDecommitment: decommitment,
-		ChainKeyCommitments:  make(map[party.ID]hash.Commitment),
+		ChainKeyCommitments:  map[party.ID]hash.Commitment{r.SelfID(): commitment}, // storing self's.
 	}, nil
 }
 
