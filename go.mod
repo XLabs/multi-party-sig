@@ -7,9 +7,11 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/stretchr/testify v1.8.4
+	github.com/xlabs/tss-common v0.0.0-20250529055213-8357b47bc351
 	github.com/zeebo/blake3 v0.2.3
 	golang.org/x/crypto v0.10.0
 	golang.org/x/sync v0.3.0
+	google.golang.org/protobuf v1.33.0
 )
 
 require (
@@ -17,10 +19,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	github.com/xlabs/tss-common v0.0.0-00010101000000-000000000000 // indirect
 	golang.org/x/sys v0.9.0 // indirect
-	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/xlabs/tss-common => /Users/jonathanweiss/gits/xlabs/tss-common
