@@ -2,11 +2,11 @@ package presign
 
 import (
 	"github.com/cronokirby/saferith"
-	"github.com/taurusgroup/multi-party-sig/internal/elgamal"
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
-	"github.com/taurusgroup/multi-party-sig/pkg/party"
-	zklogstar "github.com/taurusgroup/multi-party-sig/pkg/zk/logstar"
+	"github.com/xlabs/multi-party-sig/internal/elgamal"
+	"github.com/xlabs/multi-party-sig/internal/round"
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	zklogstar "github.com/xlabs/multi-party-sig/pkg/zk/logstar"
 )
 
 var _ round.Round = (*presign4)(nil)

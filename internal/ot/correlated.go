@@ -5,10 +5,10 @@ import (
 	"errors"
 
 	"github.com/cronokirby/saferith"
-	"github.com/taurusgroup/multi-party-sig/internal/params"
-	"github.com/taurusgroup/multi-party-sig/pkg/hash"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
-	"github.com/taurusgroup/multi-party-sig/pkg/pool"
+	"github.com/xlabs/multi-party-sig/internal/params"
+	"github.com/xlabs/multi-party-sig/pkg/hash"
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/pool"
 	"github.com/zeebo/blake3"
 )
 
@@ -245,7 +245,6 @@ type CorreOTSendResult struct {
 // satsifying t_j = q_j ^ (choices_j * Delta).
 //
 // This follows the extend section of Figure 3 in https://eprint.iacr.org/2015/546.
-//
 func CorreOTSend(ctxHash *hash.Hash, setup *CorreOTSendSetup, batchSize int, msg *CorreOTReceiveMessage) (*CorreOTSendResult, error) {
 	batchSizeBytes := batchSize >> 3
 

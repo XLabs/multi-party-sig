@@ -7,9 +7,9 @@ import (
 	"io"
 
 	"github.com/cronokirby/saferith"
-	"github.com/taurusgroup/multi-party-sig/internal/params"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/arith"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/sample"
+	"github.com/xlabs/multi-party-sig/internal/params"
+	"github.com/xlabs/multi-party-sig/pkg/math/arith"
+	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 )
 
 var (

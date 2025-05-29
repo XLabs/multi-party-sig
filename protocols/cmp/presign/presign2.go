@@ -4,17 +4,17 @@ import (
 	"errors"
 
 	"github.com/cronokirby/saferith"
-	"github.com/taurusgroup/multi-party-sig/internal/elgamal"
-	"github.com/taurusgroup/multi-party-sig/internal/mta"
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/internal/types"
-	"github.com/taurusgroup/multi-party-sig/pkg/hash"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
-	"github.com/taurusgroup/multi-party-sig/pkg/paillier"
-	"github.com/taurusgroup/multi-party-sig/pkg/party"
-	zkaffg "github.com/taurusgroup/multi-party-sig/pkg/zk/affg"
-	zkaffp "github.com/taurusgroup/multi-party-sig/pkg/zk/affp"
-	zkencelg "github.com/taurusgroup/multi-party-sig/pkg/zk/encelg"
+	"github.com/xlabs/multi-party-sig/internal/elgamal"
+	"github.com/xlabs/multi-party-sig/internal/mta"
+	"github.com/xlabs/multi-party-sig/internal/round"
+	"github.com/xlabs/multi-party-sig/internal/types"
+	"github.com/xlabs/multi-party-sig/pkg/hash"
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/paillier"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	zkaffg "github.com/xlabs/multi-party-sig/pkg/zk/affg"
+	zkaffp "github.com/xlabs/multi-party-sig/pkg/zk/affp"
+	zkencelg "github.com/xlabs/multi-party-sig/pkg/zk/encelg"
 )
 
 var _ round.Round = (*presign2)(nil)

@@ -3,16 +3,16 @@ package keygen
 import (
 	"errors"
 
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/internal/types"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/polynomial"
-	"github.com/taurusgroup/multi-party-sig/pkg/paillier"
-	"github.com/taurusgroup/multi-party-sig/pkg/party"
-	zkfac "github.com/taurusgroup/multi-party-sig/pkg/zk/fac"
-	zkmod "github.com/taurusgroup/multi-party-sig/pkg/zk/mod"
-	zkprm "github.com/taurusgroup/multi-party-sig/pkg/zk/prm"
-	"github.com/taurusgroup/multi-party-sig/protocols/cmp/config"
+	"github.com/xlabs/multi-party-sig/internal/round"
+	"github.com/xlabs/multi-party-sig/internal/types"
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
+	"github.com/xlabs/multi-party-sig/pkg/paillier"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	zkfac "github.com/xlabs/multi-party-sig/pkg/zk/fac"
+	zkmod "github.com/xlabs/multi-party-sig/pkg/zk/mod"
+	zkprm "github.com/xlabs/multi-party-sig/pkg/zk/prm"
+	"github.com/xlabs/multi-party-sig/protocols/cmp/config"
 )
 
 var _ round.Round = (*round4)(nil)
