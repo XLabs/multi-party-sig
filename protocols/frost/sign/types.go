@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/cronokirby/saferith"
-	"github.com/xlabs/multi-party-sig/internal/eth"
+	"github.com/xlabs/multi-party-sig/pkg/eth"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 
