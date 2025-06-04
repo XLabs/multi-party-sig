@@ -1,6 +1,7 @@
 package sign
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -214,27 +215,67 @@ func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error
 	return consig, nil
 }
 
-// returns {s, EthAddress(kG)} one after the other inside a byte slice.
+// returns {s, R} one after the other inside a byte slice.
 // s is a scalar of 32 bytes, padded with leading zeros.
-// EthAddress(kG) is a 20 byte address, which is the last 20 bytes of the point kG.
-func (s Signature) ToContractBytes() ([]byte, error) {
+// R is a point in compact marshal form of 33 bytes
+func (s Signature) MarshalBinary() ([]byte, error) {
 	sigBin, err := s.Z.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 
-	sBytes := LeftPadBytes(sigBin, 32)
-
-	kGAsEthAddress, err := eth.PointToAddress(s.R)
+	rBin, err := s.R.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 
-	contractBytes := make([]byte, 32+20)
-	copy(contractBytes[:32], sBytes)
-	copy(contractBytes[32:], kGAsEthAddress[:])
+	if len(sigBin) > 32 {
+		return nil, fmt.Errorf("signature scalar is too long: expected 32 bytes, got %d", len(sigBin))
+	}
 
-	return contractBytes, nil
+	b := bytes.NewBuffer(nil)
+	if _, err := b.Write(LeftPadBytes(sigBin, 32)); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.Write(LeftPadBytes(rBin, 33)); err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
+}
+
+func EmptySignature(c curve.Curve) (Signature, error) {
+	if c == nil {
+		return Signature{}, fmt.Errorf("curve cannot be nil")
+	}
+	return Signature{
+		R: c.NewPoint(),
+		Z: c.NewScalar(),
+	}, nil
+}
+
+func (s *Signature) UnmarshalBinary(bts []byte) error {
+	if s == nil {
+		return fmt.Errorf("cannot unmarshal into nil Signature")
+	}
+	if s.R == nil || s.Z == nil {
+		return fmt.Errorf("cannot unmarshal into empty Signature")
+	}
+
+	if len(bts) <= 32 {
+		return fmt.Errorf("invalid length for signature binary: expected at least 32 bytes, got %d", len(bts))
+	}
+
+	if err := s.Z.UnmarshalBinary(bts[:32]); err != nil {
+		return fmt.Errorf("failed to unmarshal S scalar: %w", err)
+	}
+
+	if err := s.R.UnmarshalBinary(bts[32:]); err != nil {
+		return fmt.Errorf("failed to unmarshal R point: %w", err)
+	}
+
+	return nil
 }
 
 type ContractSig struct {
@@ -277,5 +318,5 @@ func (s ContractSig) String() string {
 }
 
 func PublicKeyValidForContract(pk curve.Point) bool {
-	return !pk.XScalar().IsOverHalfOrder()
+	return !pk.XScalar().IsOverHalfOrder() // TODO: need more checks to match with smart contract.
 }

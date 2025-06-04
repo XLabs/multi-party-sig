@@ -287,3 +287,29 @@ func TestSignTaproot(t *testing.T) {
 
 	checkOutputTaproot(t, rounds, newPublicKey, steak)
 }
+
+func TestSigMarshal(t *testing.T) {
+	secret := sample.Scalar(rand.Reader, curve.Secp256k1{})
+	public := secret.ActOnBase()
+
+	msgHash := [32]byte{1, 2, 3, 4, 5}
+
+	sig := Sign(secret, msgHash[:])
+	assert.NoError(t, sig.Verify(public, msgHash[:]), "expected valid signature")
+
+	// Marshal the signature to bytes
+	bts, err := sig.MarshalBinary()
+	require.NoError(t, err)
+
+	fmt.Printf("Marshalled signature: %x\n", bts)
+
+	// Unmarshal the bytes back to a signature
+	unmarshalledSig, err := EmptySignature(curve.Secp256k1{})
+	require.NoError(t, err)
+
+	err = unmarshalledSig.UnmarshalBinary(bts)
+	require.NoError(t, err)
+
+	// Verify that the unmarshalled signature is valid
+	assert.NoError(t, unmarshalledSig.Verify(public, msgHash[:]), "expected valid unmarshalled signature")
+}
