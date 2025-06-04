@@ -214,6 +214,29 @@ func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error
 	return consig, nil
 }
 
+// returns {s, EthAddress(kG)} one after the other inside a byte slice.
+// s is a scalar of 32 bytes, padded with leading zeros.
+// EthAddress(kG) is a 20 byte address, which is the last 20 bytes of the point kG.
+func (s Signature) ToContractBytes() ([]byte, error) {
+	sigBin, err := s.Z.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	sBytes := LeftPadBytes(sigBin, 32)
+
+	kGAsEthAddress, err := eth.PointToAddress(s.R)
+	if err != nil {
+		return nil, err
+	}
+
+	contractBytes := make([]byte, 32+20)
+	copy(contractBytes[:32], sBytes)
+	copy(contractBytes[32:], kGAsEthAddress[:])
+
+	return contractBytes, nil
+}
+
 type ContractSig struct {
 	PkX       [32]byte
 	PkYParity uint8
