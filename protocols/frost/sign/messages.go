@@ -5,11 +5,12 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/round"
 )
 
-func NewBroadcast2(Di, Ei curve.Point) (round.Content, error) {
+func NewBroadcast2(Di, Ei curve.Point) (round.BroadcastContent, error) {
 	DiBinary, err := Di.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
+
 	EiBinary, err := Ei.MarshalBinary()
 	if err != nil {
 		return nil, err

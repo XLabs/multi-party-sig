@@ -10,7 +10,7 @@ import (
 	zksch "github.com/xlabs/multi-party-sig/pkg/zk/sch"
 )
 
-func NewBroadcast2(Phi_i *polynomial.Exponent, Sigma_i *zksch.Proof, Commitment []byte) (*Broadcast2, error) {
+func MakeBroadcast2Message(Phi_i *polynomial.Exponent, Sigma_i *zksch.Proof, Commitment []byte) (*Broadcast2, error) {
 	phii, err := Phi_i.MarshalBinary()
 	if err != nil {
 		return nil, err

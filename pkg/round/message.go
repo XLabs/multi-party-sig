@@ -13,7 +13,7 @@ type Content common.MessageContent
 // requires reliable broadcast.
 type BroadcastContent interface {
 	Content
-	// Reliable() bool
+	Reliable() bool
 }
 
 // These structs can be embedded in a broadcast message as a way of
@@ -44,22 +44,4 @@ func (m *Message) ToParsed() common.ParsedMessage {
 
 	msg := common.NewMessageWrapper(meta, m.Content, m.TrackingID)
 	return common.NewMessage(meta, m.Content, msg)
-}
-
-func IsFor(m common.ParsedMessage, id party.ID) bool {
-	if party.FromTssID(m.GetFrom()) == id {
-		return false
-	}
-
-	if m.IsBroadcast() || m.GetTo() == nil {
-		return true
-	}
-
-	for _, to := range m.GetTo() {
-		if party.FromTssID(to) == id {
-			return true
-		}
-	}
-
-	return false
 }

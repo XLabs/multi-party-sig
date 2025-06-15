@@ -44,10 +44,12 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 				rReal := getRound(r)
 				rule.ModifyBefore(rReal)
 				outFake := make(chan common.ParsedMessage, N+1)
+				// Rounds should finish at this point, so we ensure that
+				// they utilise the CanFinalize method correctly.
 				if !r.CanFinalize() {
-					r.CanFinalize()
 					return errors.New("cannot finalize")
 				}
+
 				rNew, err = r.Finalize(outFake)
 				close(outFake)
 				rNewReal = getRound(rNew)

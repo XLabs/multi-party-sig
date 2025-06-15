@@ -150,7 +150,7 @@ func (r *round2) CanFinalize() bool {
 	// We can finalize if we have received all the messages from the other parties
 	// and we have sent our own message.
 
-	t := r.Threshold() + 1 // t + 1 participants are needed to create a signature
+	t := r.Threshold() + 1
 
 	// received from everyone.
 	// the folowing used in round3: && len(r.ChainKeys) == t
@@ -180,7 +180,7 @@ func (broadcast2) RoundNumber() round.Number { return 2 }
 
 // BroadcastContent implements round.BroadcastRound.
 func (r *round2) BroadcastContent() round.BroadcastContent {
-	b, _ := NewBroadcast2(polynomial.EmptyExponent(r.Group()), sch.EmptyProof(r.Group()), hash.Commitment{})
+	b, _ := MakeBroadcast2Message(polynomial.EmptyExponent(r.Group()), sch.EmptyProof(r.Group()), hash.Commitment{})
 	return b
 }
 
