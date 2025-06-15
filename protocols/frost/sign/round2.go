@@ -109,8 +109,8 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	// This essentially follows parts of Figure 3.
 
 	// 4. "Each Pᵢ then computes the set of binding values ρₗ = H₁(l, m, B). // l is related to the ID of the players.
-	// Each Pᵢ then derives the group commitment R = ∑ₗ Dₗ + ρₗ * Eₗ and //  R = kG
-	// the challenge c = H₂(Address(R), Y, m)." // Y should be the public key?
+	// Each Pᵢ then derives the group commitment R = ∑ₗ Dₗ + ρₗ * Eₗ, (R = kG from schnorr's original scheme) and
+	// the challenge c = H₂(Address(R), Y, m)." (where Y is the public key).
 	//
 	// It's easier to calculate H(m, B, l), that way we can simply clone the hash
 	// state after H(m, B), instead of rehashing them each time.
@@ -171,38 +171,32 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	// Lambdas[i] = λᵢ
 	Lambdas := polynomial.Lagrange(r.Group(), r.PartyIDs())
 
-	var z_i curve.Scalar
 	// S in schnorr: s = k + x*C
 	// 5. "Each Pᵢ computes their response using their long-lived secret share sᵢ
 	// by computing zᵢ = [dᵢ + (eᵢ ρᵢ)] + λᵢ sᵢ c, using S to determine
 	// the ith lagrange coefficient λᵢ"
+	z_i := r.Group().NewScalar().Set(Lambdas[r.SelfID()]).Mul(r.s_i).Mul(c)
+	// temp var. ed == dᵢ + eᵢ ρᵢ
+	ed := r.Group().NewScalar().Set(rho[r.SelfID()]).Mul(r.e_i)
+	ed.Add(r.d_i)
+
 	if r.taproot {
-		z_i = r.Group().NewScalar().Set(Lambdas[r.SelfID()]).Mul(r.s_i).Mul(c)
-		z_i.Add(r.d_i)
-		ed := r.Group().NewScalar().Set(rho[r.SelfID()]).Mul(r.e_i)
 		z_i.Add(ed)
 	} else {
 		//changed to work with smart contracts using ecrecover.
 		// thus z_i = (λᵢ sᵢ c) - [dᵢ + (eᵢ ρᵢ)] here.
 		// we later negate the resulting z to get the schnorr value s = k - x*c
-		z_i = r.Group().NewScalar().Set(Lambdas[r.SelfID()]).Mul(r.s_i).Mul(c)
 
-		// ed == dᵢ + eᵢ ρᵢ
-		ed := r.Group().NewScalar().Set(rho[r.SelfID()]).Mul(r.e_i)
-		ed.Add(r.d_i)
-
-		// zi = λi si c - (di + ei ρi)
+		// Computation result: zi = λi si c - (di + ei ρi)
 		z_i.Sub(ed)
 	}
 
 	// 6. "Each Pᵢ securely deletes ((dᵢ, Dᵢ), (eᵢ, Eᵢ)) from their local storage,
 	// and returns zᵢ to SA."
-	//
+	r.d_i.Set(r.Group().NewScalar())
+	r.e_i.Set(r.Group().NewScalar())
+
 	// Since we don't have a signing authority, we instead broadcast zᵢ.
-
-	// TODO: Securely delete the nonces.
-
-	// Broadcast our response
 	b, err := NewBroadcast3(z_i)
 	if err != nil {
 		return r, err
