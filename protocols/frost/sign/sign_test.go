@@ -27,6 +27,29 @@ var testTrackid = &common.TrackingID{
 	Digest: []byte{1, 2, 3, 4},
 }
 
+func SignEcSchnorr(secret curve.Scalar, m []byte) Signature {
+	group := secret.Curve()
+
+	// k is the first nonce
+	k := sample.Scalar(rand.Reader, group)
+
+	R := k.ActOnBase() // R == kG.
+
+	// Hash the message and the public key
+	challenge, err := makeEthChallenge(R, secret.ActOnBase(), messageHash(m))
+	if err != nil {
+		panic(err)
+	}
+
+	// z = k - s_i * c
+	z := k.Sub(secret.Mul(challenge))
+
+	return Signature{
+		R: R,
+		Z: z,
+	}
+}
+
 // ensures that the we correctly turn secp256k1 points into eth addresses
 func TestPointToAddressCorrect(t *testing.T) {
 	zero := (&saferith.Nat{}).SetUint64(2)
@@ -111,7 +134,7 @@ func TestBasic(t *testing.T) {
 
 	msgHash := [32]byte{1, 2, 3, 4, 5}
 
-	sig := Sign(secret, msgHash[:])
+	sig := SignEcSchnorr(secret, msgHash[:])
 	assert.NoError(t, sig.Verify(public, msgHash[:]), "expected valid signature")
 
 	consig, err := sig.ToContractSig(public, msgHash[:])
@@ -294,7 +317,7 @@ func TestSigMarshal(t *testing.T) {
 
 	msgHash := [32]byte{1, 2, 3, 4, 5}
 
-	sig := Sign(secret, msgHash[:])
+	sig := SignEcSchnorr(secret, msgHash[:])
 	assert.NoError(t, sig.Verify(public, msgHash[:]), "expected valid signature")
 
 	// Marshal the signature to bytes

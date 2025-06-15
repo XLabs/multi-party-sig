@@ -2,7 +2,6 @@ package sign
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -13,7 +12,6 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/pkg/eth"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
-	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 
 	"golang.org/x/crypto/sha3"
 )
@@ -47,29 +45,6 @@ type Signature struct {
 	R curve.Point
 	// z is the response scalar.
 	Z curve.Scalar
-}
-
-func Sign(secret curve.Scalar, m []byte) Signature {
-	group := secret.Curve()
-
-	// k is the first nonce
-	k := sample.Scalar(rand.Reader, group)
-
-	R := k.ActOnBase() // R == kG.
-
-	// Hash the message and the public key
-	challenge, err := makeEthChallenge(R, secret.ActOnBase(), messageHash(m))
-	if err != nil {
-		panic(err)
-	}
-
-	// z = k - s_i * c
-	z := k.Sub(secret.Mul(challenge))
-
-	return Signature{
-		R: R,
-		Z: z,
-	}
 }
 
 // Verify checks if a signature equation actually holds.

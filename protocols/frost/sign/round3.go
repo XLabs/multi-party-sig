@@ -104,7 +104,6 @@ func (round3) VerifyMessage(round.Message) error { return nil }
 func (round3) StoreMessage(round.Message) error { return nil }
 
 func (r *round3) CanFinalize() bool {
-	// Rshares, z lambda:
 	t := r.Threshold() + 1
 
 	if len(r.RShares) < t || len(r.z) < t || len(r.Lambda) < t {
