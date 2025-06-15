@@ -36,7 +36,7 @@ func SignEcSchnorr(secret curve.Scalar, m []byte) Signature {
 	R := k.ActOnBase() // R == kG.
 
 	// Hash the message and the public key
-	challenge, err := makeEthChallenge(R, secret.ActOnBase(), messageHash(m))
+	challenge, err := intoEVMCompatibleChallenge(R, secret.ActOnBase(), messageHash(m))
 	if err != nil {
 		panic(err)
 	}

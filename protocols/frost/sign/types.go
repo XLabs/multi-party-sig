@@ -59,7 +59,7 @@ func (sig Signature) Verify(public curve.Point, m []byte) error {
 	// challengeHash := hash.New()
 	// _ = challengeHash.WriteAny(r, public, messageHash(m))
 	// challenge := sample.Scalar(challengeHash.Digest(), group)
-	challenge, err := makeEthChallenge(sig.R, public, messageHash(m))
+	challenge, err := intoEVMCompatibleChallenge(sig.R, public, messageHash(m))
 	if err != nil {
 		return err
 	}
@@ -84,45 +84,23 @@ func (sig Signature) Verify(public curve.Point, m []byte) error {
 	return nil //actual.Equal(sig.R)
 }
 
-func VerifyContract(ContractSig) {}
-
-// Verify checks if a signature equation actually holds.
-//
-// Note that m is the hash of a message, and not the message itself.
-// func (sig Signature) VerifyOldstyle(public curve.Point, m []byte) bool {
-// 	group := public.Curve()
-
-// 	r, err := eth.PointToAddress(sig.R)
-// 	if err != nil {
-// 		return false
-// 	}
-
-// 	challengeHash := hash.New()
-// 	_ = challengeHash.WriteAny(r, public, messageHash(m))
-// 	challenge := sample.Scalar(challengeHash.Digest(), group)
-
-// 	expected := challenge.Act(public) // ePK = -exG?
-// 	expected = expected.Add(sig.R)    // exG + sG
-
-// 	actual := sig.z.ActOnBase()
-
-// 	return expected.Equal(actual)
-// }
-
 func marshalPointForContract(p curve.Point) ([]byte, error) {
 	bts, err := p.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 
-	chainlinkStyle := make([]byte, len(bts))
-	copy(chainlinkStyle, bts[1:])
-	chainlinkStyle[len(bts)-1] = bts[0] - 2
+	contractStyleMarshal := make([]byte, len(bts))
+	copy(contractStyleMarshal, bts[1:])
+	contractStyleMarshal[len(bts)-1] = bts[0] - 2
 
-	return chainlinkStyle, nil
+	return contractStyleMarshal, nil
 }
 
-func makeEthChallenge(R, pk curve.Point, msgHash []byte) (curve.Scalar, error) {
+// this function is responsible for creating the challegne scalar for schnorr signatures.
+// that is Hash(R,PK, msgDigest). While usually R is nonce * G, in the case of smart contracts,
+// R is an eth address (so we can use it with the ecrecover function in EVM.).
+func intoEVMCompatibleChallenge(R, pk curve.Point, msgHash []byte) (curve.Scalar, error) {
 	sumhash, err := challengeHash(R, pk, msgHash)
 	if err != nil {
 		return nil, err

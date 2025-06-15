@@ -162,7 +162,7 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 		c = r.Group().NewScalar().SetNat(new(saferith.Nat).SetBytes(cHash))
 	} else {
 		var err error
-		c, err = makeEthChallenge(R, r.Y, r.M)
+		c, err = intoEVMCompatibleChallenge(R, r.Y, r.M)
 		if err != nil {
 			return r, err
 		}
