@@ -196,7 +196,7 @@ func TestSign(t *testing.T) {
 			VerificationShares: party.NewPointMap(verificationShares),
 			ChainKey:           chainKey,
 		}
-		result, _ = result.DeriveChild(1)
+
 		if newPublicKey == nil {
 			newPublicKey = result.PublicKey
 		}
