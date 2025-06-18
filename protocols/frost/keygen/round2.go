@@ -148,7 +148,8 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 
 func (r *round2) CanFinalize() bool {
 	// We can finalize if we have received all the messages from the other parties
-	// and we have sent our own message.
+	// and we have sent our own message: To create a round2 instance, we need to
+	// successfully invoke round1.Finalize(), which puts its message in the output channel.
 
 	t := r.Threshold() + 1
 
