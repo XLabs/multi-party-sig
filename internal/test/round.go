@@ -72,7 +72,6 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 				}
 			} else {
 				if !r.CanFinalize() {
-					r.CanFinalize()
 					return errors.New("cannot finalize")
 				}
 				rNew, err = r.Finalize(out)
