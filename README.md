@@ -1,3 +1,8 @@
+# Fork Details:
+Please note that this fork does not output FROST's output of Schnorr signatures
+over secp256k1. It is modified such that signatures can be verified using `ecrecover` over specific EVM smart contracts.
+
+
 # multi-party-sig
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)

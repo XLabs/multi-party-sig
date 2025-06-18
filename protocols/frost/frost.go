@@ -1,12 +1,15 @@
 package frost
 
 import (
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
-	"github.com/taurusgroup/multi-party-sig/pkg/party"
-	"github.com/taurusgroup/multi-party-sig/pkg/protocol"
-	"github.com/taurusgroup/multi-party-sig/protocols/frost/keygen"
-	"github.com/taurusgroup/multi-party-sig/protocols/frost/sign"
+	"fmt"
+
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/protocol"
+	"github.com/xlabs/multi-party-sig/pkg/round"
+	"github.com/xlabs/multi-party-sig/protocols/frost/keygen"
+	"github.com/xlabs/multi-party-sig/protocols/frost/sign"
+	common "github.com/xlabs/tss-common"
 )
 
 type (
@@ -14,6 +17,8 @@ type (
 	TaprootConfig = keygen.TaprootConfig
 	Signature     = sign.Signature
 )
+
+const NumRounds = 3
 
 // EmptyConfig creates an empty Config with a specific group.
 //
@@ -43,7 +48,8 @@ func EmptyConfig(group curve.Curve) *Config {
 // selfID is the identifier for the local party calling this function.
 //
 // This protocol corresponds to Figure 1 of the Frost paper:
-//   https://eprint.iacr.org/2020/852.pdf
+//
+//	https://eprint.iacr.org/2020/852.pdf
 func Keygen(group curve.Curve, selfID party.ID, participants []party.ID, threshold int) protocol.StartFunc {
 	return keygen.StartKeygenCommon(false, group, participants, threshold, selfID, nil, nil, nil)
 }
@@ -91,8 +97,8 @@ func RefreshTaproot(config *TaprootConfig, participants []party.ID) protocol.Sta
 // messageHash is the hash of the message a signature should be generated for.
 //
 // This protocol merges Figures 2 and 3 from the Frost paper:
-//   https://eprint.iacr.org/2020/852.pdf
 //
+//	https://eprint.iacr.org/2020/852.pdf
 //
 // We merge the pre-processing and signing protocols into a single signing protocol
 // which doesn't require any pre-processing.
@@ -128,5 +134,43 @@ func SignTaproot(config *TaprootConfig, signers []party.ID, messageHash []byte) 
 		PublicKey:          publicKey,
 		VerificationShares: party.NewPointMap(genericVerificationShares),
 	}
+
 	return sign.StartSignCommon(true, normalResult, signers, messageHash)
+}
+
+var (
+	ErrNilSignatureData = fmt.Errorf("signature data is nil")
+	ErrEmptySignatureS  = fmt.Errorf("signature.S data is empty")
+	ErrEmptySignatureR  = fmt.Errorf("signature.R data is empty")
+)
+
+// used to convert a common.SignatureData to a  frost.Signature.
+// frost signature can be turned to contractSignature which can be used by ethereum contracts.
+func Secp256k1SignatureTranslate(sig *common.SignatureData) (Signature, error) {
+	if sig == nil {
+		return Signature{}, ErrNilSignatureData
+	}
+	if sig.S == nil {
+		return Signature{}, ErrEmptySignatureS
+	}
+	if sig.R == nil {
+		return Signature{}, ErrEmptySignatureR
+	}
+
+	group := curve.Secp256k1{}
+
+	z := group.NewScalar()
+	if err := z.UnmarshalBinary(sig.S); err != nil {
+		return Signature{}, fmt.Errorf("failed to unmarshal S: %w", err)
+	}
+
+	R := group.NewPoint()
+	if err := R.UnmarshalBinary(sig.R); err != nil {
+		return Signature{}, fmt.Errorf("failed to unmarshal R: %w", err)
+	}
+
+	return Signature{
+		R: R,
+		Z: z,
+	}, nil
 }
