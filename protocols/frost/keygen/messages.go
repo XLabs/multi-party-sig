@@ -8,6 +8,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
 	zksch "github.com/xlabs/multi-party-sig/pkg/zk/sch"
+	common "github.com/xlabs/tss-common"
 )
 
 func MakeBroadcast2Message(Phi_i *polynomial.Exponent, Sigma_i *zksch.Proof, Commitment []byte) (*Broadcast2, error) {
@@ -26,6 +27,9 @@ func MakeBroadcast2Message(Phi_i *polynomial.Exponent, Sigma_i *zksch.Proof, Com
 		Sigmai:     sigmai,
 		Commitment: Commitment,
 	}, nil
+}
+func (b *Broadcast2) ProtocolType() common.ProtocolType {
+	return common.ProtocolFROST
 }
 
 // Reliable implements round.ReliableBroadcastContent.
@@ -53,6 +57,10 @@ func NewBroadcast3(c_l types.RID, decommitment hash.Decommitment) *Broadcast3 {
 		Decommitment: decommitment,
 		sizeCache:    0,
 	}
+}
+
+func (b *Broadcast3) ProtocolType() common.ProtocolType {
+	return common.ProtocolFROST
 }
 
 // Reliable implements round.BroadcastRoundContent.
@@ -83,6 +91,10 @@ func NewMessage3(f_li curve.Scalar) (*Message3, error) {
 	return &Message3{
 		FLi: scalarbits,
 	}, nil
+}
+
+func (b *Message3) ProtocolType() common.ProtocolType {
+	return common.ProtocolFROST
 }
 
 // RoundNumber implements round.Content.

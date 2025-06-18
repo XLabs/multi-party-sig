@@ -3,6 +3,7 @@ package sign
 import (
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/round"
+	common "github.com/xlabs/tss-common"
 )
 
 func NewBroadcast2(Di, Ei curve.Point) (round.BroadcastContent, error) {
@@ -22,6 +23,10 @@ func NewBroadcast2(Di, Ei curve.Point) (round.BroadcastContent, error) {
 	}
 
 	return content, nil
+}
+
+func (b *Broadcast2) ProtocolType() common.ProtocolType {
+	return common.ProtocolFROST
 }
 
 func (b *Broadcast2) RoundNumber() int {
@@ -76,6 +81,10 @@ func (b *Broadcast3) ValidateBasic() bool {
 	}
 
 	return true
+}
+
+func (b *Broadcast3) ProtocolType() common.ProtocolType {
+	return common.ProtocolFROST
 }
 
 // This message should be broadcast, but not reliably.
