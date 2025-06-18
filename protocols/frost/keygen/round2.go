@@ -124,12 +124,14 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	// (l, fᵢ(l)), deleting f_i and each share afterward except for (i, fᵢ(i)),
 	// which they keep for themselves."
 
-	if err := r.BroadcastMessage(out, NewBroadcast3(r.ChainKeys[r.SelfID()], r.ChainKeyDecommitment)); err != nil {
+	msg := makeBroadcast3Message(r.ChainKeys[r.SelfID()], r.ChainKeyDecommitment)
+
+	if err := r.BroadcastMessage(out, msg); err != nil {
 		return r, err
 	}
 
 	for _, l := range r.OtherPartyIDs() {
-		msg, err := NewMessage3(r.f_i.Evaluate(l.Scalar(r.Group())))
+		msg, err := createMessage3(r.f_i.Evaluate(l.Scalar(r.Group())))
 		if err != nil {
 			return r, err
 		}
@@ -181,7 +183,7 @@ func (broadcast2) RoundNumber() round.Number { return 2 }
 
 // BroadcastContent implements round.BroadcastRound.
 func (r *round2) BroadcastContent() round.BroadcastContent {
-	b, _ := MakeBroadcast2Message(polynomial.EmptyExponent(r.Group()), sch.EmptyProof(r.Group()), hash.Commitment{})
+	b, _ := makeBroadcast2Message(polynomial.EmptyExponent(r.Group()), sch.EmptyProof(r.Group()), hash.Commitment{})
 	return b
 }
 

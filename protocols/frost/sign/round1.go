@@ -94,7 +94,7 @@ func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	E_i := e_i.ActOnBase() // eiG
 
 	// Broadcast the commitments
-	b, err := NewBroadcast2(D_i, E_i)
+	b, err := makeBroadcast2Message(D_i, E_i)
 	if err != nil {
 		return r, err
 	}

@@ -6,7 +6,7 @@ import (
 	common "github.com/xlabs/tss-common"
 )
 
-func NewBroadcast2(Di, Ei curve.Point) (round.BroadcastContent, error) {
+func makeBroadcast2Message(Di, Ei curve.Point) (round.BroadcastContent, error) {
 	DiBinary, err := Di.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (b *Broadcast2) Reliable() bool {
 }
 
 // Broadcast3:
-func NewBroadcast3(z_i curve.Scalar) (*Broadcast3, error) {
+func makeBroadcast3Message(z_i curve.Scalar) (*Broadcast3, error) {
 	z_iBinary, err := z_i.MarshalBinary()
 	if err != nil {
 		return nil, err

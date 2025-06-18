@@ -126,7 +126,7 @@ func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 		return r, fmt.Errorf("failed to commit to chain key")
 	}
 
-	b, err := MakeBroadcast2Message(Phi_i, Sigma_i, commitment)
+	b, err := makeBroadcast2Message(Phi_i, Sigma_i, commitment)
 	if err != nil {
 		return r, fmt.Errorf("failed to create broadcast message: %w", err)
 	}

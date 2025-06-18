@@ -197,7 +197,7 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	r.e_i.Set(r.Group().NewScalar())
 
 	// Since we don't have a signing authority, we instead broadcast zᵢ.
-	b, err := NewBroadcast3(z_i)
+	b, err := makeBroadcast3Message(z_i)
 	if err != nil {
 		return r, err
 	}
@@ -221,7 +221,7 @@ func (round2) MessageContent() round.Content { return nil }
 
 // BroadcastContent implements round.BroadcastRound.
 func (r *round2) BroadcastContent() round.BroadcastContent {
-	b, _ := NewBroadcast2(r.Group().NewPoint(), r.Group().NewPoint())
+	b, _ := makeBroadcast2Message(r.Group().NewPoint(), r.Group().NewPoint())
 	return b
 }
 

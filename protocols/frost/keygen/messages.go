@@ -11,7 +11,7 @@ import (
 	common "github.com/xlabs/tss-common"
 )
 
-func MakeBroadcast2Message(Phi_i *polynomial.Exponent, Sigma_i *zksch.Proof, Commitment []byte) (*Broadcast2, error) {
+func makeBroadcast2Message(Phi_i *polynomial.Exponent, Sigma_i *zksch.Proof, Commitment []byte) (*Broadcast2, error) {
 	phii, err := Phi_i.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (x *Broadcast2) ValidateBasic() bool {
 	return len(x.Phii) > 0 && len(x.Sigmai) > 0 && len(x.Commitment) > 0
 }
 
-func NewBroadcast3(c_l types.RID, decommitment hash.Decommitment) *Broadcast3 {
+func makeBroadcast3Message(c_l types.RID, decommitment hash.Decommitment) *Broadcast3 {
 	return &Broadcast3{
 		Cl:           c_l,
 		Decommitment: decommitment,
@@ -84,7 +84,7 @@ func (x *Broadcast3) ValidateBasic() bool {
 	return len(x.Decommitment) > 0 && len(x.Cl) > 0
 }
 
-func NewMessage3(f_li curve.Scalar) (*Message3, error) {
+func createMessage3(f_li curve.Scalar) (*Message3, error) {
 	scalarbits, err := f_li.MarshalBinary()
 	if err != nil {
 		return nil, err
