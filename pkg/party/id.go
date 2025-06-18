@@ -21,17 +21,12 @@ import (
 type ID string
 
 func FromTssID(pid *common.PartyID) ID {
-	// TODO: make a concat of the key and id, and be able to convert the two perfectly.
-	return ID(pid.Id)
+	return ID(pid.ID)
 }
 
-// TODO:
 func (id ID) ToTssPartyID() *common.PartyID {
 	return &common.PartyID{
-		MessageWrapper_PartyID: &common.MessageWrapper_PartyID{
-			Id:  string(id),
-			Key: []byte(id),
-		},
+		ID: string(id),
 	}
 }
 

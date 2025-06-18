@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/round"
@@ -34,11 +35,17 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 	if roundType, err = checkAllRoundsSame(rounds); err != nil {
 		return err, false
 	}
+
+	mtx := sync.Mutex{}
+
 	// get the second set of messages
 	for id := range rounds {
 		idx := id
 		r := rounds[idx]
 		errGroup.Go(func() error {
+			mtx.Lock()
+			defer mtx.Unlock()
+
 			var rNew, rNewReal round.Session
 			if rule != nil {
 				rReal := getRound(r)
@@ -100,11 +107,9 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 	for msg := range out {
 		// Sending mechanism for testing...
 		for _, r := range rounds {
-			tmp := proto.Clone(msg.Content())
-			cntnt, ok := tmp.(round.Content)
-			if !ok {
-				panic("not a round.Content")
-			}
+			cntnt := proto.CloneOf(msg.Content())
+
+			tid := proto.CloneOf(msg.WireMsg().TrackingID)
 
 			r := r
 			if party.FromTssID(msg.GetFrom()) == r.SelfID() || round.Number(msg.Content().RoundNumber()) != r.Number() {
@@ -112,13 +117,17 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 			}
 
 			errGroup.Go(func() error {
+
 				m := round.Message{
 					From:       party.FromTssID(msg.GetFrom()),
 					To:         "",
 					Broadcast:  false,
 					Content:    cntnt,
-					TrackingID: msg.WireMsg().TrackingID,
+					TrackingID: tid,
 				}
+
+				mtx.Lock()
+				defer mtx.Unlock()
 
 				if msg.IsBroadcast() {
 					m.Broadcast = true

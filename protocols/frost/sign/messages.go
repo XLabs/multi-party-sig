@@ -25,7 +25,7 @@ func NewBroadcast2(Di, Ei curve.Point) (round.BroadcastContent, error) {
 	return content, nil
 }
 
-func (b *Broadcast2) ProtocolType() common.ProtocolType {
+func (b *Broadcast2) GetProtocol() common.ProtocolType {
 	return common.ProtocolFROST
 }
 
@@ -83,7 +83,7 @@ func (b *Broadcast3) ValidateBasic() bool {
 	return true
 }
 
-func (b *Broadcast3) ProtocolType() common.ProtocolType {
+func (b *Broadcast3) GetProtocol() common.ProtocolType {
 	return common.ProtocolFROST
 }
 

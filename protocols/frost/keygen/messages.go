@@ -28,7 +28,9 @@ func MakeBroadcast2Message(Phi_i *polynomial.Exponent, Sigma_i *zksch.Proof, Com
 		Commitment: Commitment,
 	}, nil
 }
-func (b *Broadcast2) ProtocolType() common.ProtocolType {
+
+// GetProtocol implements round.Content.
+func (b *Broadcast2) GetProtocol() common.ProtocolType {
 	return common.ProtocolFROST
 }
 
@@ -59,7 +61,7 @@ func NewBroadcast3(c_l types.RID, decommitment hash.Decommitment) *Broadcast3 {
 	}
 }
 
-func (b *Broadcast3) ProtocolType() common.ProtocolType {
+func (b *Broadcast3) GetProtocol() common.ProtocolType {
 	return common.ProtocolFROST
 }
 
@@ -93,7 +95,7 @@ func NewMessage3(f_li curve.Scalar) (*Message3, error) {
 	}, nil
 }
 
-func (b *Message3) ProtocolType() common.ProtocolType {
+func (b *Message3) GetProtocol() common.ProtocolType {
 	return common.ProtocolFROST
 }
 
