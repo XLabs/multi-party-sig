@@ -3,10 +3,11 @@ package keygen
 import (
 	"fmt"
 
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
-	"github.com/taurusgroup/multi-party-sig/pkg/party"
-	"github.com/taurusgroup/multi-party-sig/pkg/protocol"
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/protocol"
+	"github.com/xlabs/multi-party-sig/pkg/round"
+	common "github.com/xlabs/tss-common"
 )
 
 const (
@@ -32,7 +33,12 @@ func StartKeygenCommon(taproot bool, group curve.Curve, participants []party.ID,
 			PartyIDs:         participants,
 			Threshold:        threshold,
 			Group:            group,
+			TrackingID:       &common.TrackingID{},
 		}
+		if err := info.TrackingID.FromString(string(sessionID)); err != nil {
+			return nil, fmt.Errorf("keygen.Start: %w", err)
+		}
+
 		if taproot {
 			info.ProtocolID = protocolIDTaproot
 		} else {
