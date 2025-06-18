@@ -59,7 +59,7 @@ func (r *round3) StoreBroadcastMessage(msg round.Message) error {
 		return fmt.Errorf("failed to unmarshal zᵢ: %w", err)
 	}
 
-	var expected, actual curve.Point
+	expected := r.c.Act(r.Lambda[from].Act(r.YShares[from]))
 	if r.taproot {
 		// These steps come from Figure 3 of the Frost paper.
 
@@ -72,21 +72,19 @@ func (r *round3) StoreBroadcastMessage(msg round.Message) error {
 		//
 		// Note that step 7.a is an artifact of having a signing authority. In our case,
 		// we've already computed everything that step computes.
-		expected = r.c.Act(r.Lambda[from].Act(r.YShares[from])).Add(r.RShares[from])
-
-		actual = Zi.ActOnBase()
+		expected = expected.Add(r.RShares[from])
 
 	} else {
-		left := r.c.Act(r.Lambda[from].Act(r.YShares[from]))
-		right := r.RShares[from]
-		expected = left.Sub(right)
-
 		// z_i = (λᵢ sᵢ c) - [dᵢ + (eᵢ ρᵢ)] here.
-		actual = Zi.ActOnBase() // z_i*G = [ C * λᵢ *si  - (di +ei*rhoi)]G=
+
+		// z_i*G = [ C * λᵢ *si  - (di +ei*rhoi)]G=
 		// 							 (C * λᵢ *si)G  - (di +ei*rhoi)G =
 		// 							 (C * λᵢ)Yᵢ - (di +ei*rhoi)G=
 		// 							 (C * λᵢ)Yᵢ - Rshares[i]
+		expected = expected.Sub(r.RShares[from])
 	}
+
+	actual := Zi.ActOnBase()
 
 	if !actual.Equal(expected) {
 		return fmt.Errorf("round3: failed to verify response from %v", from)
