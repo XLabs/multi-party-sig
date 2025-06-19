@@ -110,6 +110,9 @@ type Point interface {
 	// but this isn't strictly necessary.
 	encoding.BinaryMarshaler
 	encoding.BinaryUnmarshaler
+
+	// Clone must provide a deep copy of the Point and be safe to use in a concurrent environment.
+	Clone() Point
 	// Curve returns the Elliptic Curve group associated with this type of Point.
 	Curve() Curve
 	// Add returns a new Point, by adding another Point to this one.
@@ -138,6 +141,7 @@ type Point interface {
 	//
 	// If you choose not to implement this method, simply return nil.
 	XScalar() Scalar
+	// YScalar is similar to XScalar.
 	YScalar() Scalar
 }
 
