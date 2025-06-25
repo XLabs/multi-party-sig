@@ -7,7 +7,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/stretchr/testify v1.8.4
-	github.com/xlabs/tss-common v0.0.0-20250619055827-614f1b58c4a0
+	github.com/xlabs/tss-common v0.0.0-20250625094949-baf523666800
 	github.com/zeebo/blake3 v0.2.3
 	golang.org/x/crypto v0.10.0
 	golang.org/x/sync v0.3.0

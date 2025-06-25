@@ -36,9 +36,14 @@ type Message struct {
 }
 
 func (m *Message) ToParsed() common.ParsedMessage {
+	var to []*common.PartyID = nil
+	if !m.Broadcast {
+		to = []*common.PartyID{m.To.ToTssPartyID()}
+	}
+
 	meta := common.MessageRouting{
 		From:        m.From.ToTssPartyID(),
-		To:          []*common.PartyID{m.To.ToTssPartyID()},
+		To:          to,
 		IsBroadcast: m.Broadcast,
 	}
 
