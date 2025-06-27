@@ -63,8 +63,8 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 				rule.ModifyAfter(rNewReal)
 				for msg := range outFake {
 					var to party.ID
-					if len(msg.GetTo()) > 0 {
-						to = party.FromTssID(msg.GetTo()[0])
+					if msg.GetTo() != nil {
+						to = party.FromTssID(msg.GetTo())
 					}
 
 					rule.ModifyContent(rNewReal, to, getContent(msg.Content()))
@@ -140,7 +140,7 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 						return err
 					}
 				} else {
-					m.To = party.FromTssID(msg.GetTo()[0])
+					m.To = party.FromTssID(msg.GetTo())
 
 					if m.To == "" || m.To == r.SelfID() {
 						if err = r.VerifyMessage(m); err != nil {
