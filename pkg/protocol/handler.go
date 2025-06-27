@@ -260,8 +260,8 @@ func (h *MultiHandler) finalize() {
 		}
 
 		var to party.ID
-		if len(roundMsg.GetTo()) > 0 {
-			to = party.FromTssID(roundMsg.GetTo()[0])
+		if roundMsg.GetTo() != nil {
+			to = party.FromTssID(roundMsg.GetTo())
 		}
 
 		msg := &Message{
