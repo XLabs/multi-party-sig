@@ -60,6 +60,10 @@ func (r *round2) StoreBroadcastMessage(msg round.Message) error {
 		return fmt.Errorf("failed to unmarshal Phi_i: %w", err)
 	}
 
+	if phii.Degree() != r.threshold {
+		return fmt.Errorf("received polynomial of degree %d, expected %d", phii.Degree(), r.threshold)
+	}
+
 	sigmai := sch.EmptyProof(r.Group())
 	if err := cbor.Unmarshal(tmp.Sigmai, sigmai); err != nil {
 		return fmt.Errorf("failed to unmarshal Sigma_i: %w", err)
