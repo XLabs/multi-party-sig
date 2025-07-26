@@ -188,6 +188,11 @@ func (e *Exponent) UnmarshalBinary(data []byte) error {
 	if e == nil || e.group == nil {
 		return errors.New("can't unmarshal Exponent with no group")
 	}
+
+	if len(data) < 4 {
+		return errors.New("data too short to unmarshal Exponent")
+	}
+
 	group := e.group
 	size := binary.BigEndian.Uint32(data)
 	e.coefficients = make([]curve.Point, int(size))

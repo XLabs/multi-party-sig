@@ -83,4 +83,7 @@ func TestMarshall(t *testing.T) {
 	err = cbor.Unmarshal(out, polyExp2)
 	require.NoError(t, err, "failed to Unmarshal")
 	assert.True(t, polyExp.Equal(*polyExp2), "should be the same")
+
+	shortData := make([]byte, 3)
+	require.Error(t, polyExp2.UnmarshalBinary(shortData), "should fail to unmarshal with short data")
 }
