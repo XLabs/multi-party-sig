@@ -164,8 +164,11 @@ func (s *Secp256k1Scalar) SetNat(x *saferith.Nat) Scalar {
 
 func (s *Secp256k1Scalar) Act(that Point) Point {
 	other := secp256k1CastPoint(that)
+	other.value.ToAffine()
+
 	out := new(Secp256k1Point)
 	secp256k1.ScalarMultNonConst(&s.value, &other.value, &out.value)
+
 	return out
 }
 
