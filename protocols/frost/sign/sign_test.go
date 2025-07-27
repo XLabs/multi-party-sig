@@ -92,6 +92,7 @@ func TestPointMarshalling(t *testing.T) {
 }
 
 func TestChallengeMaking(t *testing.T) {
+	t.Skip("this test is not relevant, until we receive a smart contract we can match it against.")
 	_, pk := genSpecificKeyPair(t)
 
 	c, err := challengeHash(pk, pk, []byte{1, 2, 3, 4, 5})

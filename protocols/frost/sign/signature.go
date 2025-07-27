@@ -242,19 +242,13 @@ func intoEVMCompatibleChallenge(R, pk curve.Point, msgHash []byte) (curve.Scalar
 	return c, nil
 }
 
+// Used to create the challenge scalar for schnorr signatures.
+// outputs H(R, pk, msgDigest)
 func challengeHash(R curve.Point, pk curve.Point, msgHash []byte) ([]byte, error) {
 	hsh := sha3.NewLegacyKeccak256()
 
 	pkbts, err := marshalPointForContract(pk)
 	if err != nil {
-		return nil, err
-	}
-
-	if _, err := hsh.Write(pkbts); err != nil {
-		return nil, err
-	}
-
-	if _, err := hsh.Write(msgHash); err != nil {
 		return nil, err
 	}
 
@@ -264,6 +258,14 @@ func challengeHash(R curve.Point, pk curve.Point, msgHash []byte) ([]byte, error
 	}
 
 	if _, err := hsh.Write(addressR[:]); err != nil {
+		return nil, err
+	}
+
+	if _, err := hsh.Write(pkbts); err != nil {
+		return nil, err
+	}
+
+	if _, err := hsh.Write(msgHash); err != nil {
 		return nil, err
 	}
 
