@@ -51,7 +51,7 @@ type round1 struct {
 func (r *round1) VerifyMessage(round.Message) error { return nil }
 func (r *round1) StoreMessage(round.Message) error  { return nil }
 
-const deriveHashKeyContext = "github.com/taurusgroup/multi-party-sig/frost 2021-07-30T09:48+00:00 Derive hash Key"
+const deriveHashKeyContext = "github.com/xlabs/multi-party-sig/frost 2025-07-27T13:55:19+00:00 Derive hash Key"
 
 func (r *round1) CanFinalize() bool {
 	// round1 is ready to finalize, since it doesn't depend on anyone else's.
