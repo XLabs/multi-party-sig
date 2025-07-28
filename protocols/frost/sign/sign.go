@@ -23,7 +23,7 @@ func StartSignCommon(taproot bool, result *keygen.Config, signers []party.ID, me
 		info := round.Info{
 			FinalRoundNumber: protocolRounds,
 			SelfID:           result.ID,
-			PartyIDs:         signers,
+			PartyIDs:         party.NewIDSlice(signers), // ensures sorted order
 			Threshold:        result.Threshold,
 			Group:            result.PublicKey.Curve(),
 			ProtocolID:       protocolID,

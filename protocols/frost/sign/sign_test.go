@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/big"
+	mathrand "math/rand"
 	"testing"
 
 	"github.com/cronokirby/saferith"
@@ -201,7 +202,11 @@ func TestSign(t *testing.T) {
 		if newPublicKey == nil {
 			newPublicKey = result.PublicKey
 		}
-		r, err := StartSignCommon(false, result, partyIDs, steak[:])(testTrackid.ToByteString())
+
+		// ensuring shuffling the order of party IDs doesn't affect signing process.
+		shuffledIds := shuffleIds(partyIDs)
+
+		r, err := StartSignCommon(false, result, shuffledIds, steak[:])(testTrackid.ToByteString())
 		require.NoError(t, err, "round creation should not result in an error")
 		rounds = append(rounds, r)
 	}
@@ -336,4 +341,13 @@ func TestSigMarshal(t *testing.T) {
 
 	// Verify that the unmarshalled signature is valid
 	assert.NoError(t, unmarshalledSig.Verify(public, msgHash[:]), "expected valid unmarshalled signature")
+}
+
+func shuffleIds(partyIDs []party.ID) []party.ID {
+	shuffledIds := party.NewIDSlice(partyIDs)
+	mathrand.Shuffle(len(shuffledIds), func(i, j int) {
+		shuffledIds[i], shuffledIds[j] = shuffledIds[j], shuffledIds[i]
+	})
+
+	return shuffledIds
 }
