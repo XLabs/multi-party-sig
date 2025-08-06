@@ -1,12 +1,10 @@
 package polynomial
 
 import (
-	"encoding/binary"
 	"errors"
 	"io"
 
 	"github.com/cronokirby/saferith"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 )
 
@@ -184,42 +182,80 @@ func EmptyExponent(group curve.Curve) *Exponent {
 	return &Exponent{group: group}
 }
 
-func (e *Exponent) UnmarshalBinary(data []byte) error {
-	if e == nil || e.group == nil {
-		return errors.New("can't unmarshal Exponent with no group")
-	}
-
-	if len(data) < 4 {
-		return errors.New("data too short to unmarshal Exponent")
-	}
-
-	group := e.group
-	size := binary.BigEndian.Uint32(data)
-	e.coefficients = make([]curve.Point, int(size))
-	for i := 0; i < len(e.coefficients); i++ {
-		e.coefficients[i] = group.NewPoint()
-	}
-	rawExponent := rawExponentData{Coefficients: e.coefficients}
-	if err := cbor.Unmarshal(data[4:], &rawExponent); err != nil {
-		return err
-	}
-	e.group = group
-	e.coefficients = rawExponent.Coefficients
-	e.IsConstant = rawExponent.IsConstant
-	return nil
-}
+var (
+	errNoGroup         = errors.New("can't unmarshal Exponent with no group")
+	dataSizeIncorrect  = errors.New("data size is incorrect")
+	errSizeNotPositive = errors.New("size must be positive")
+)
 
 func (e *Exponent) MarshalBinary() ([]byte, error) {
-	data, err := cbor.Marshal(rawExponentData{
-		IsConstant:   e.IsConstant,
-		Coefficients: e.coefficients,
-	})
-	if err != nil {
-		return nil, err
+	if e.group == nil {
+		return nil, errNoGroup
 	}
-	out := make([]byte, 4+len(data))
-	size := len(e.coefficients)
-	binary.BigEndian.PutUint32(out, uint32(size))
-	copy(out[4:], data)
-	return out, nil
+
+	sizePerCoeff := e.group.PointBinarySize()
+	data := make([]byte, 1+(len(e.coefficients)*sizePerCoeff))
+
+	for i, v := range e.coefficients {
+		bts, err := e.group.MarshalPoint(v)
+		if err != nil {
+			return nil, err
+		}
+
+		copy(data[i*sizePerCoeff:], bts)
+	}
+
+	constPos := len(e.coefficients) * sizePerCoeff
+	data[constPos] = 0 // first byte is reserved for IsConstant
+	if e.IsConstant {
+		data[constPos] = 1
+	}
+
+	return data, nil
+}
+
+// receives the number of elements in the coefficients slice, ensuring
+// the unmarshaller knows how many coefficients to expect.
+func UnmarshalBinary(group curve.Curve, size int, data []byte) (*Exponent, error) {
+	if group == nil {
+		return nil, errNoGroup
+	}
+
+	if size <= 0 {
+		return nil, errSizeNotPositive
+	}
+
+	pointSize := group.PointBinarySize()
+
+	if len(data) != 1+size*pointSize {
+		return nil, dataSizeIncorrect
+	}
+
+	p := &Exponent{
+		group:        group,
+		IsConstant:   false,
+		coefficients: make([]curve.Point, 0, size),
+	}
+
+	for i := range size {
+		point, err := group.UnmarshalPoint(data[i*pointSize : (i+1)*pointSize])
+		if err != nil {
+			return nil, err
+		}
+
+		p.coefficients = append(p.coefficients, point)
+	}
+
+	isConstant := false
+	isConstPos := size * pointSize
+	if data[isConstPos] == 1 {
+		isConstant = true
+	} else if data[isConstPos] != 0 {
+		return nil, errors.New("invalid IsConstant value")
+	}
+
+	p.IsConstant = isConstant
+
+	return p, nil
+
 }
