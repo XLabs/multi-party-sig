@@ -25,12 +25,13 @@ func PointToAddress(p curve.Point) (EthAddress, error) {
 	if x == nil || y == nil {
 		return EthAddress{}, ErrLongMarshal
 	}
+	crv := p.Curve()
 
-	xbts, err := x.MarshalBinary()
+	xbts, err := crv.MarshalScalar(x)
 	if err != nil {
 		return EthAddress{}, err
 	}
-	ybts, err := y.MarshalBinary()
+	ybts, err := crv.MarshalScalar(y)
 	if err != nil {
 		return EthAddress{}, err
 	}

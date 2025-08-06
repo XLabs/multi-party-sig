@@ -1,8 +1,6 @@
 package curve
 
 import (
-	"encoding"
-
 	"github.com/cronokirby/saferith"
 )
 
@@ -66,10 +64,6 @@ type Curve interface {
 // to your concrete type. This interface is not designed to be able to handle
 // different Scalar types, but we can't encode that in the type system.
 type Scalar interface {
-	// This should encode the Scalar as Big Endian bytes, without failure.
-	encoding.BinaryMarshaler
-	// This should decode the Scalar from Big Endian bytes.
-	encoding.BinaryUnmarshaler
 	// Curves returns the Curve associated with this kind of Scalar.
 	Curve() Curve
 	// Add mutates this Scalar, by adding in another.
@@ -123,13 +117,6 @@ type Scalar interface {
 // to your concrete type. This interface is not designed to be able to handle
 // different Point types, but we can't encode that in the type system.
 type Point interface {
-	// You're free to implement the binary marshalling however you'd like.
-	//
-	// This marshalling should also work with the identity element, ideally,
-	// but this isn't strictly necessary.
-	encoding.BinaryMarshaler
-	encoding.BinaryUnmarshaler
-
 	// Clone must provide a deep copy of the Point and be safe to use in a concurrent environment.
 	Clone() Point
 	// Curve returns the Elliptic Curve group associated with this type of Point.
@@ -166,7 +153,7 @@ type Point interface {
 
 // MakeInt converts a scalar into an Int.
 func MakeInt(s Scalar) *saferith.Int {
-	bytes, err := s.MarshalBinary()
+	bytes, err := s.Curve().MarshalScalar(s)
 	if err != nil {
 		panic(err)
 	}

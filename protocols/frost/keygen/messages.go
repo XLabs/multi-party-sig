@@ -85,7 +85,7 @@ func (x *Broadcast3) ValidateBasic() bool {
 }
 
 func createMessage3(f_li curve.Scalar) (*Message3, error) {
-	scalarbits, err := f_li.MarshalBinary()
+	scalarbits, err := f_li.Curve().MarshalScalar(f_li)
 	if err != nil {
 		return nil, err
 	}

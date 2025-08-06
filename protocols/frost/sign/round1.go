@@ -72,7 +72,7 @@ func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	//
 	// This protects against bad randomness, since a constant value for a is still unpredictable,
 	// and fault attacks against the hash function, because of the randomness.
-	s_iBytes, err := r.s_i.MarshalBinary()
+	s_iBytes, err := r.Group().MarshalScalar(r.s_i)
 	if err != nil {
 		return r, err
 	}

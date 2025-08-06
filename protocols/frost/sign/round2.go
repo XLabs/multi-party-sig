@@ -44,14 +44,13 @@ func (r *round2) StoreBroadcastMessage(msg round.Message) error {
 		return round.ErrInvalidContent
 	}
 
-	Di := r.Group().NewPoint()
-	Ei := r.Group().NewPoint()
-
-	if err := Di.UnmarshalBinary(body.Di); err != nil {
+	Di, err := r.Group().UnmarshalPoint(body.Di)
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal Dᵢ: %w", err)
 	}
 
-	if err := Ei.UnmarshalBinary(body.Ei); err != nil {
+	Ei, err := r.Group().UnmarshalPoint(body.Ei)
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal Eᵢ: %w", err)
 	}
 

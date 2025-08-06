@@ -159,7 +159,11 @@ func (sk SecretKey) Sign(rand io.Reader, m []byte) (Signature, error) {
 	_ = e.UnmarshalBinary(eHash)
 
 	z := e.Mul(d).Add(k)
-	zBytes, _ := z.MarshalBinary()
+
+	zBytes, err := z.Curve().MarshalScalar(z)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal z: %w", err)
+	}
 
 	sig := make([]byte, 0, SignatureLen)
 	sig = append(sig, RBytes...)

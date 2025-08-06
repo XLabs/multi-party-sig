@@ -333,10 +333,9 @@ func TestSigMarshal(t *testing.T) {
 	fmt.Printf("Marshalled signature: %x\n", bts)
 
 	// Unmarshal the bytes back to a signature
-	unmarshalledSig, err := EmptySignature(curve.Secp256k1{})
-	require.NoError(t, err)
+	unmarshalledSig := Signature{}
 
-	err = unmarshalledSig.UnmarshalBinary(bts)
+	err = unmarshalledSig.UnmarshalBinary(curve.Secp256k1{}, bts)
 	require.NoError(t, err)
 
 	// Verify that the unmarshalled signature is valid

@@ -47,7 +47,7 @@ type Signature struct {
 }
 
 func marshalPointForContract(p curve.Point) ([]byte, error) {
-	bts, err := p.MarshalBinary()
+	bts, err := p.Curve().MarshalPoint(p)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func marshalPointForContract(p curve.Point) ([]byte, error) {
 }
 
 func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error) {
-	sigBin, err := s.Z.MarshalBinary()
+	sigBin, err := s.Z.Curve().MarshalScalar(s.Z)
 	if err != nil {
 		return ContractSig{}, err
 	}
@@ -91,12 +91,13 @@ func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error
 // s is a scalar of 32 bytes, padded with leading zeros.
 // R is a point in compact marshal form of 33 bytes
 func (s Signature) MarshalBinary() ([]byte, error) {
-	sigBin, err := s.Z.MarshalBinary()
+	crve := s.Z.Curve()
+	sigBin, err := crve.MarshalScalar(s.Z)
 	if err != nil {
 		return nil, err
 	}
 
-	rBin, err := s.R.MarshalBinary()
+	rBin, err := crve.MarshalPoint(s.R)
 	if err != nil {
 		return nil, err
 	}
@@ -117,35 +118,28 @@ func (s Signature) MarshalBinary() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func EmptySignature(c curve.Curve) (Signature, error) {
-	if c == nil {
-		return Signature{}, fmt.Errorf("curve cannot be nil")
-	}
-	return Signature{
-		R: c.NewPoint(),
-		Z: c.NewScalar(),
-	}, nil
-}
-
-func (s *Signature) UnmarshalBinary(bts []byte) error {
+func (s *Signature) UnmarshalBinary(curve curve.Curve, bts []byte) error {
 	if s == nil {
 		return fmt.Errorf("cannot unmarshal into nil Signature")
 	}
-	if s.R == nil || s.Z == nil {
-		return fmt.Errorf("cannot unmarshal into empty Signature")
+
+	sclarSize := curve.ScalarBinarySize()
+	pntSize := curve.PointBinarySize()
+	if len(bts) < sclarSize+pntSize {
+		return fmt.Errorf("invalid length for signature binary: expected at least %d bytes, got %d", sclarSize+pntSize, len(bts))
 	}
 
-	if len(bts) <= 32 {
-		return fmt.Errorf("invalid length for signature binary: expected at least 32 bytes, got %d", len(bts))
-	}
-
-	if err := s.Z.UnmarshalBinary(bts[:32]); err != nil {
+	scalar, err := curve.UnmarshalScalar(bts[:sclarSize])
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal S scalar: %w", err)
 	}
+	s.Z = scalar
 
-	if err := s.R.UnmarshalBinary(bts[32:]); err != nil {
+	pnt, err := curve.UnmarshalPoint(bts[sclarSize : sclarSize+pntSize])
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal R point: %w", err)
 	}
+	s.R = pnt
 
 	return nil
 }

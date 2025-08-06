@@ -89,11 +89,12 @@ func (Secp256k1) MarshalScalar(s Scalar) ([]byte, error) {
 		return nil, errNilScalar
 	}
 
-	if _, ok := s.(*Secp256k1Scalar); !ok {
+	sclr, ok := s.(*Secp256k1Scalar)
+	if !ok {
 		return nil, fmt.Errorf("expected Secp256k1Scalar, got %T", s)
 	}
 
-	return s.MarshalBinary()
+	return sclr.MarshalBinary()
 }
 
 func (Secp256k1) UnmarshalPoint(data []byte) (Point, error) {
@@ -107,11 +108,12 @@ func (Secp256k1) MarshalPoint(p Point) ([]byte, error) {
 		return nil, errNilPoint
 	}
 
-	if _, ok := p.(*Secp256k1Point); !ok {
+	pnt, ok := p.(*Secp256k1Point)
+	if !ok {
 		return nil, fmt.Errorf("expected Secp256k1Point, got %T", p)
 	}
 
-	return p.MarshalBinary()
+	return pnt.MarshalBinary()
 }
 
 type Secp256k1Scalar struct {
@@ -151,7 +153,7 @@ func (s *Secp256k1Scalar) UnmarshalBinary(data []byte) error {
 		return errNilScalar
 	}
 
-	if len(data) != scalarBinarySize {
+	if len(data) < scalarBinarySize {
 		return fmt.Errorf("invalid length for secp256k1 scalar: %d", len(data))
 	}
 
@@ -289,7 +291,7 @@ func (p *Secp256k1Point) UnmarshalBinary(data []byte) error {
 		return errNilPoint
 	}
 
-	if len(data) != pointBinarySize {
+	if len(data) < pointBinarySize {
 		return fmt.Errorf("invalid length for secp256k1Point: %d", len(data))
 	}
 
