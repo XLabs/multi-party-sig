@@ -6,6 +6,22 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
+type scalarMarshaller interface {
+	UnmarshalScalar(data []byte) (Scalar, error)
+
+	MarshalScalar(s Scalar) ([]byte, error)
+
+	ScalarBinarySize() int
+}
+
+type pointMarshaller interface {
+	UnmarshalPoint(data []byte) (Point, error)
+
+	MarshalPoint(p Point) ([]byte, error)
+
+	PointBinarySize() int
+}
+
 // Curve represents the starting point for working with an Elliptic Curve group.
 //
 // The expectation is that this interface will be implemented by a nominal struct,
@@ -33,6 +49,9 @@ type Curve interface {
 	SafeScalarBytes() int
 	// Order returns a Modulus holding order of this group.
 	Order() *saferith.Modulus
+
+	scalarMarshaller
+	pointMarshaller
 }
 
 // Scalar represents a number modulo the order of some Elliptic Curve group.
