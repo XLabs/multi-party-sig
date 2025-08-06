@@ -206,7 +206,7 @@ func (e *Exponent) MarshalBinary() ([]byte, error) {
 	}
 
 	constPos := len(e.coefficients) * sizePerCoeff
-	data[constPos] = 0 // first byte is reserved for IsConstant
+	data[constPos] = 0 // 0 // first byte is reserved for IsConstant
 	if e.IsConstant {
 		data[constPos] = 1
 	}
@@ -246,15 +246,7 @@ func UnmarshalBinary(group curve.Curve, size int, data []byte) (*Exponent, error
 		p.coefficients = append(p.coefficients, point)
 	}
 
-	isConstant := false
-	isConstPos := size * pointSize
-	if data[isConstPos] == 1 {
-		isConstant = true
-	} else if data[isConstPos] != 0 {
-		return nil, errors.New("invalid IsConstant value")
-	}
-
-	p.IsConstant = isConstant
+	p.IsConstant = data[size*pointSize] != 0
 
 	return p, nil
 
