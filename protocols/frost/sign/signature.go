@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/cronokirby/saferith"
@@ -52,11 +51,16 @@ func marshalPointForContract(p curve.Point) ([]byte, error) {
 		return nil, err
 	}
 
-	contractStyleMarshal := make([]byte, len(bts))
-	copy(contractStyleMarshal, bts[1:])
-	contractStyleMarshal[len(bts)-1] = bts[0] - 2
+	pkx := bts[1:]
+	prty := bts[0] - 2
 
-	return contractStyleMarshal, nil
+	// shift scalar by one.
+	x := big.NewInt(0).SetBytes(pkx)
+	x.Lsh(x, 1)
+	// pkx |= parity
+	x.Or(x, big.NewInt(int64(prty)))
+
+	return x.Bytes(), nil
 }
 
 func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error) {
@@ -74,14 +78,17 @@ func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error
 	if err != nil {
 		return ContractSig{}, err
 	}
+	if len(pkBin) != 32 {
+		return ContractSig{}, fmt.Errorf("public key is not 32 bytes, got %d bytes", len(pkBin))
+	}
 
 	consig := ContractSig{
-		PkX:       [32]byte(pkBin[:32]),
-		PkYParity: pkBin[32],
-		S:         (&big.Int{}).SetBytes(sigBin),
-		M:         (&big.Int{}).SetBytes(msg),
-		R:         s.R,
-		Address:   rAddress,
+		PkX: [32]byte(pkBin),
+		// PkYParity: pkBin[32],
+		S:       (&big.Int{}).SetBytes(sigBin),
+		M:       (&big.Int{}).SetBytes(msg),
+		R:       s.R,
+		Address: rAddress,
 	}
 
 	return consig, nil
@@ -174,7 +181,7 @@ func (s ContractSig) String() string {
 
 	b.WriteString("ContractSig{\n")
 	b.WriteString("  pkX                : 0x" + Bytes2Hex(s.PkX[:]) + "\n")
-	b.WriteString("  pkyparity          : " + strconv.FormatUint(uint64(s.PkYParity), 10) + "\n")
+	// b.WriteString("  pkyparity          : " + strconv.FormatUint(uint64(s.PkYParity), 10) + "\n")
 	b.WriteString("  msghash            : 0x" + Bytes2Hex(LeftPadBytes(s.M.Bytes(), 32)) + "\n")
 	b.WriteString("  s                  : 0x" + Bytes2Hex(LeftPadBytes(s.S.Bytes(), 32)) + "\n")
 	b.WriteString("  nonceTimesGAddress : 0x" + Bytes2Hex(s.Address[:]) + "\n")
