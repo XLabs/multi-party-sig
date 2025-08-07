@@ -7,12 +7,12 @@ import (
 )
 
 func makeBroadcast2Message(Di, Ei curve.Point) (round.BroadcastContent, error) {
-	DiBinary, err := Di.MarshalBinary()
+	DiBinary, err := Di.Curve().MarshalPoint(Di)
 	if err != nil {
 		return nil, err
 	}
 
-	EiBinary, err := Ei.MarshalBinary()
+	EiBinary, err := Ei.Curve().MarshalPoint(Ei)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (b *Broadcast2) Reliable() bool {
 
 // Broadcast3:
 func makeBroadcast3Message(z_i curve.Scalar) (*Broadcast3, error) {
-	z_iBinary, err := z_i.MarshalBinary()
+	z_iBinary, err := z_i.Curve().MarshalScalar(z_i)
 	if err != nil {
 		return nil, err
 	}

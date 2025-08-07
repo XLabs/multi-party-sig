@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/big"
+	mathrand "math/rand"
 	"testing"
 
 	"github.com/cronokirby/saferith"
@@ -92,6 +93,7 @@ func TestPointMarshalling(t *testing.T) {
 }
 
 func TestChallengeMaking(t *testing.T) {
+	t.Skip("this test is not relevant, until we receive a smart contract we can match it against.")
 	_, pk := genSpecificKeyPair(t)
 
 	c, err := challengeHash(pk, pk, []byte{1, 2, 3, 4, 5})
@@ -200,7 +202,11 @@ func TestSign(t *testing.T) {
 		if newPublicKey == nil {
 			newPublicKey = result.PublicKey
 		}
-		r, err := StartSignCommon(false, result, partyIDs, steak[:])(testTrackid.ToByteString())
+
+		// ensuring shuffling the order of party IDs doesn't affect signing process.
+		shuffledIds := shuffleIds(partyIDs)
+
+		r, err := StartSignCommon(false, result, shuffledIds, steak[:])(testTrackid.ToByteString())
 		require.NoError(t, err, "round creation should not result in an error")
 		rounds = append(rounds, r)
 	}
@@ -327,12 +333,20 @@ func TestSigMarshal(t *testing.T) {
 	fmt.Printf("Marshalled signature: %x\n", bts)
 
 	// Unmarshal the bytes back to a signature
-	unmarshalledSig, err := EmptySignature(curve.Secp256k1{})
-	require.NoError(t, err)
+	unmarshalledSig := Signature{}
 
-	err = unmarshalledSig.UnmarshalBinary(bts)
+	err = unmarshalledSig.UnmarshalBinary(curve.Secp256k1{}, bts)
 	require.NoError(t, err)
 
 	// Verify that the unmarshalled signature is valid
 	assert.NoError(t, unmarshalledSig.Verify(public, msgHash[:]), "expected valid unmarshalled signature")
+}
+
+func shuffleIds(partyIDs []party.ID) []party.ID {
+	shuffledIds := party.NewIDSlice(partyIDs)
+	mathrand.Shuffle(len(shuffledIds), func(i, j int) {
+		shuffledIds[i], shuffledIds[j] = shuffledIds[j], shuffledIds[i]
+	})
+
+	return shuffledIds
 }

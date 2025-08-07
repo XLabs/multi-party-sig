@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
@@ -74,13 +73,63 @@ func TestSum(t *testing.T) {
 func TestMarshall(t *testing.T) {
 	group := curve.Secp256k1{}
 
+	szOfPolyCoeffs := 11
 	sec := sample.Scalar(rand.Reader, group)
-	poly := NewPolynomial(group, 10, sec)
+	// minus 1 because polynomial expects degree, not size.
+	poly := NewPolynomial(group, szOfPolyCoeffs-1, sec)
 	polyExp := NewPolynomialExponent(poly)
-	out, err := cbor.Marshal(polyExp)
-	require.NoError(t, err, "failed to Marshal")
-	polyExp2 := EmptyExponent(group)
-	err = cbor.Unmarshal(out, polyExp2)
+
+	exp2, err := UnmarshalBinary(polyExp.group, szOfPolyCoeffs, marshalExp(t, polyExp))
 	require.NoError(t, err, "failed to Unmarshal")
-	assert.True(t, polyExp.Equal(*polyExp2), "should be the same")
+	assert.True(t, polyExp.Equal(*exp2), "should be the same")
+
+	data := marshalExp(t, polyExp)
+
+	_, err = UnmarshalBinary(polyExp.group, szOfPolyCoeffs+1, data)
+	require.Error(t, err, "should fail to unmarshal with short data")
+
+	_, err = UnmarshalBinary(polyExp.group, 2, data)
+	require.Error(t, err, "should fail to unmarshal with too little size")
+
+	_, err = UnmarshalBinary(polyExp.group, szOfPolyCoeffs, nil)
+	require.Error(t, err, "should fail to unmarshal with nil data")
+
+	_, err = UnmarshalBinary(polyExp.group, szOfPolyCoeffs, []byte{})
+	require.Error(t, err, "should fail to unmarshal with empty data")
+
+	_, err = UnmarshalBinary(polyExp.group, -1, []byte{})
+	require.Error(t, err, "should fail to unmarshal with negative degree")
+
+	_, err = UnmarshalBinary(polyExp.group, 0, []byte{})
+	require.Error(t, err, "should fail to unmarshal with zero degree")
+
+	_, err = UnmarshalBinary(nil, 0, []byte{})
+	require.Error(t, err, "should fail to unmarshal with zero degree")
+}
+
+func TestMarshallConst(t *testing.T) {
+	group := curve.Secp256k1{}
+
+	s := group.NewScalar()
+	fmt.Println(s.IsZero())
+
+	poly := NewPolynomial(group, 10, s) // const scalar.
+	polyExp := NewPolynomialExponent(poly)
+
+	polyExp.IsConstant = true
+	data := marshalExp(t, polyExp)
+
+	exp2, err := UnmarshalBinary(polyExp.group, len(polyExp.coefficients), data)
+	require.NoError(t, err, "failed to Unmarshal")
+	assert.True(t, polyExp.Equal(*exp2), "should be the same")
+
+	// check that it is constant
+	require.True(t, exp2.IsConstant, "should be constant")
+}
+
+func marshalExp(t *testing.T, polyExp *Exponent) []byte {
+	data, err := polyExp.MarshalBinary()
+	require.NoError(t, err, "failed to Marshal")
+	require.NotEmpty(t, data, "should not be empty")
+	return data
 }

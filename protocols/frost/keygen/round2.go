@@ -55,9 +55,19 @@ func (r *round2) StoreBroadcastMessage(msg round.Message) error {
 		return round.ErrInvalidContent
 	}
 
-	phii := polynomial.EmptyExponent(r.Group())
-	if err := phii.UnmarshalBinary(tmp.Phii); err != nil {
+	expectedPhiiSize := r.threshold + 1
+	if r.refresh {
+		// polynomial[0] is not sent in refresh mode ( due to it being the identity point ) as optimization.
+		expectedPhiiSize -= 1
+	}
+
+	phii, err := polynomial.UnmarshalBinary(r.Group(), expectedPhiiSize, tmp.Phii)
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal Phi_i: %w", err)
+	}
+
+	if phii.Degree() != r.threshold {
+		return fmt.Errorf("received polynomial of degree %d, expected %d", phii.Degree(), r.threshold)
 	}
 
 	sigmai := sch.EmptyProof(r.Group())

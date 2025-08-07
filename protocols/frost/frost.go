@@ -159,13 +159,13 @@ func Secp256k1SignatureTranslate(sig *common.SignatureData) (Signature, error) {
 
 	group := curve.Secp256k1{}
 
-	z := group.NewScalar()
-	if err := z.UnmarshalBinary(sig.S); err != nil {
+	z, err := group.UnmarshalScalar(sig.S)
+	if err != nil {
 		return Signature{}, fmt.Errorf("failed to unmarshal S: %w", err)
 	}
 
-	R := group.NewPoint()
-	if err := R.UnmarshalBinary(sig.R); err != nil {
+	R, err := group.UnmarshalPoint(sig.R)
+	if err != nil {
 		return Signature{}, fmt.Errorf("failed to unmarshal R: %w", err)
 	}
 

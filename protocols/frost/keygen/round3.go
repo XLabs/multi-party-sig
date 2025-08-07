@@ -81,8 +81,8 @@ func (r *round3) VerifyMessage(msg round.Message) error {
 func (r *round3) StoreMessage(msg round.Message) error {
 	from, body := msg.From, msg.Content.(*Message3)
 
-	F_li := r.Group().NewScalar()
-	if err := F_li.UnmarshalBinary(body.FLi); err != nil {
+	F_li, err := r.Group().UnmarshalScalar(body.FLi)
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal F_li: %w", err)
 	}
 
@@ -214,10 +214,8 @@ func (message3) RoundNumber() round.Number { return 3 }
 
 // MessageContent implements round.Round.
 func (r *round3) MessageContent() round.Content {
-	s := r.Group().NewScalar()
-	bts, _ := s.MarshalBinary()
 	return &Message3{
-		FLi: bts,
+		FLi: make([]byte, r.Group().ScalarBinarySize()),
 	}
 }
 
