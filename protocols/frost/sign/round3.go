@@ -54,8 +54,8 @@ func (r *round3) StoreBroadcastMessage(msg round.Message) error {
 		return round.ErrInvalidContent
 	}
 
-	Zi := r.Group().NewScalar()
-	if err := Zi.UnmarshalBinary(body.Zi); err != nil {
+	Zi, err := r.Group().UnmarshalScalar(body.Zi)
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal zᵢ: %w", err)
 	}
 
@@ -146,7 +146,7 @@ func (r *round3) Finalize(chan<- common.ParsedMessage) (round.Session, error) {
 	if r.taproot {
 		sig := taproot.Signature(make([]byte, 0, taproot.SignatureLen))
 		sig = append(sig, r.R.(*curve.Secp256k1Point).XBytes()...)
-		zBytes, err := z.MarshalBinary()
+		zBytes, err := r.Group().MarshalScalar(z)
 		if err != nil {
 			return r, err
 		}
@@ -181,10 +181,8 @@ func (broadcast3) RoundNumber() round.Number { return 3 }
 
 // BroadcastContent implements round.BroadcastRound.
 func (r *round3) BroadcastContent() round.BroadcastContent {
-	s, _ := r.Group().NewScalar().MarshalBinary()
-
 	return &Broadcast3{
-		Zi: s,
+		Zi: make([]byte, r.Group().ScalarBinarySize()),
 	}
 }
 

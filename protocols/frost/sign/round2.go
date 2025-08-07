@@ -44,14 +44,13 @@ func (r *round2) StoreBroadcastMessage(msg round.Message) error {
 		return round.ErrInvalidContent
 	}
 
-	Di := r.Group().NewPoint()
-	Ei := r.Group().NewPoint()
-
-	if err := Di.UnmarshalBinary(body.Di); err != nil {
+	Di, err := r.Group().UnmarshalPoint(body.Di)
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal Dᵢ: %w", err)
 	}
 
-	if err := Ei.UnmarshalBinary(body.Ei); err != nil {
+	Ei, err := r.Group().UnmarshalPoint(body.Ei)
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal Eᵢ: %w", err)
 	}
 
@@ -122,8 +121,8 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	// each extra party l.
 	rhoPreHash := hash.New()
 	_ = rhoPreHash.WriteAny(r.M)
-	for _, l := range r.PartyIDs() {
-		_ = rhoPreHash.WriteAny(r.D[l], r.E[l])
+	for idx, l := range r.PartyIDs() {
+		_ = rhoPreHash.WriteAny(idx, r.D[l], r.E[l])
 	}
 	for _, l := range r.PartyIDs() {
 		rhoHash := rhoPreHash.Clone()
