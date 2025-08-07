@@ -45,6 +45,11 @@ type Signature struct {
 	Z curve.Scalar
 }
 
+const contractPkSize = 32
+
+var errInvalidPublicKey = fmt.Errorf("public key is not valid for smart contract. must be less than Q/2")
+
+// size of the public key in bytes for the contract.
 func marshalPointForContract(p curve.Point) ([]byte, error) {
 	bts, err := p.Curve().MarshalPoint(p)
 	if err != nil {
@@ -60,7 +65,12 @@ func marshalPointForContract(p curve.Point) ([]byte, error) {
 	// pkx |= parity
 	x.Or(x, big.NewInt(int64(prty)))
 
-	return x.Bytes(), nil
+	res := x.Bytes()
+	if len(res) > contractPkSize {
+		return nil, errInvalidPublicKey
+	}
+
+	return res, nil
 }
 
 func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error) {
@@ -78,13 +88,9 @@ func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error
 	if err != nil {
 		return ContractSig{}, err
 	}
-	if len(pkBin) != 32 {
-		return ContractSig{}, fmt.Errorf("public key is not 32 bytes, got %d bytes", len(pkBin))
-	}
 
 	consig := ContractSig{
-		PkX: [32]byte(pkBin),
-		// PkYParity: pkBin[32],
+		Pk:      [contractPkSize]byte(pkBin),
 		S:       (&big.Int{}).SetBytes(sigBin),
 		M:       (&big.Int{}).SetBytes(msg),
 		R:       s.R,
@@ -152,9 +158,9 @@ func (s *Signature) UnmarshalBinary(curve curve.Curve, bts []byte) error {
 }
 
 type ContractSig struct {
-	PkX       [32]byte
-	PkYParity uint8
-	M         *big.Int // Message Hash
+	Pk [contractPkSize]byte // PkX contains the parity bit in the last byte. ((x <<1 )|  paritybyte)
+
+	M *big.Int // Message Hash
 
 	S       *big.Int
 	R       curve.Point
@@ -180,9 +186,8 @@ func (s ContractSig) String() string {
 	b := strings.Builder{}
 
 	b.WriteString("ContractSig{\n")
-	b.WriteString("  pkX                : 0x" + Bytes2Hex(s.PkX[:]) + "\n")
-	// b.WriteString("  pkyparity          : " + strconv.FormatUint(uint64(s.PkYParity), 10) + "\n")
-	b.WriteString("  msghash            : 0x" + Bytes2Hex(LeftPadBytes(s.M.Bytes(), 32)) + "\n")
+	b.WriteString("  pk                 : 0x" + Bytes2Hex(s.Pk[:]) + "\n")
+	b.WriteString("  msg                : 0x" + Bytes2Hex(LeftPadBytes(s.M.Bytes(), 32)) + "\n")
 	b.WriteString("  s                  : 0x" + Bytes2Hex(LeftPadBytes(s.S.Bytes(), 32)) + "\n")
 	b.WriteString("  nonceTimesGAddress : 0x" + Bytes2Hex(s.Address[:]) + "\n")
 	b.WriteString("}\n")
@@ -191,7 +196,7 @@ func (s ContractSig) String() string {
 }
 
 func PublicKeyValidForContract(pk curve.Point) bool {
-	return !pk.XScalar().IsOverHalfOrder() // TODO: need more checks to match with smart contract.
+	return !pk.XScalar().IsOverHalfOrder()
 }
 
 // Verify checks if a signature equation actually holds.
