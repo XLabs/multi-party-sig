@@ -39,8 +39,8 @@ func do(t *testing.T, id party.ID, ids []party.ID, threshold int, message []byte
 			cnfg = c0
 			break
 		}
-		if i == 9 {
-			t.Fatalf("public key is not valid for contract after 10 attempts")
+		if i == 50 {
+			t.Fatalf("public key is not valid for contract after 50 attempts, something is wrong.")
 		}
 	}
 

@@ -47,28 +47,34 @@ type Signature struct {
 
 const contractPkSize = 32
 
-var errInvalidPublicKey = fmt.Errorf("public key is not valid for smart contract. must be less than Q/2")
+var errInvalidPublicKey = fmt.Errorf("public key is not valid for smart contract. must not be over half the curve order")
 
 // size of the public key in bytes for the contract.
 func marshalPointForContract(p curve.Point) ([]byte, error) {
+	if !PublicKeyValidForContract(p) {
+		// The smart contract uses ecrecover, which expects
+		// the public key to be smaller than half the curve order.
+		// In addition, we shift the x-coordinate left by one bit and store the parity
+		// saving us a byte of constant contract memory.
+		return nil, errInvalidPublicKey
+	}
+
 	bts, err := p.Curve().MarshalPoint(p)
 	if err != nil {
 		return nil, err
 	}
 
 	pkx := bts[1:]
-	prty := bts[0] - 2
+	parity := bts[0] - 2
 
 	// shift scalar by one.
 	x := big.NewInt(0).SetBytes(pkx)
 	x.Lsh(x, 1)
 	// pkx |= parity
-	x.Or(x, big.NewInt(int64(prty)))
+	x.Or(x, big.NewInt(int64(parity)))
 
-	res := x.Bytes()
-	if len(res) > contractPkSize {
-		return nil, errInvalidPublicKey
-	}
+	res := make([]byte, contractPkSize)
+	res = x.FillBytes(res) // ensures we use 32 bytes.
 
 	return res, nil
 }
@@ -158,7 +164,7 @@ func (s *Signature) UnmarshalBinary(curve curve.Curve, bts []byte) error {
 }
 
 type ContractSig struct {
-	Pk [contractPkSize]byte // PkX contains the parity bit in the last byte. ((x <<1 )|  paritybyte)
+	Pk [contractPkSize]byte // Pk contains the x-coordinate shifted left by 1 bit with parity in the LSB: (x << 1) | parity
 
 	M *big.Int // Message Hash
 
