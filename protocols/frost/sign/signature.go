@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/cronokirby/saferith"
@@ -46,17 +45,38 @@ type Signature struct {
 	Z curve.Scalar
 }
 
+const contractPkSize = 32
+
+var errInvalidPublicKey = fmt.Errorf("public key is not valid for smart contract. must not be over half the curve order")
+
+// size of the public key in bytes for the contract.
 func marshalPointForContract(p curve.Point) ([]byte, error) {
+	if !PublicKeyValidForContract(p) {
+		// The smart contract uses ecrecover, which expects
+		// the public key to be smaller than half the curve order.
+		// In addition, we shift the x-coordinate left by one bit and store the parity
+		// saving us a byte of constant contract memory.
+		return nil, errInvalidPublicKey
+	}
+
 	bts, err := p.Curve().MarshalPoint(p)
 	if err != nil {
 		return nil, err
 	}
 
-	contractStyleMarshal := make([]byte, len(bts))
-	copy(contractStyleMarshal, bts[1:])
-	contractStyleMarshal[len(bts)-1] = bts[0] - 2
+	pkx := bts[1:]
+	parity := bts[0] - 2
 
-	return contractStyleMarshal, nil
+	// shift scalar by one.
+	x := big.NewInt(0).SetBytes(pkx)
+	x.Lsh(x, 1)
+	// pkx |= parity
+	x.Or(x, big.NewInt(int64(parity)))
+
+	res := make([]byte, contractPkSize)
+	res = x.FillBytes(res) // ensures we use 32 bytes.
+
+	return res, nil
 }
 
 func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error) {
@@ -76,12 +96,11 @@ func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error
 	}
 
 	consig := ContractSig{
-		PkX:       [32]byte(pkBin[:32]),
-		PkYParity: pkBin[32],
-		S:         (&big.Int{}).SetBytes(sigBin),
-		M:         (&big.Int{}).SetBytes(msg),
-		R:         s.R,
-		Address:   rAddress,
+		Pk:      [contractPkSize]byte(pkBin),
+		S:       (&big.Int{}).SetBytes(sigBin),
+		M:       (&big.Int{}).SetBytes(msg),
+		R:       s.R,
+		Address: rAddress,
 	}
 
 	return consig, nil
@@ -145,9 +164,9 @@ func (s *Signature) UnmarshalBinary(curve curve.Curve, bts []byte) error {
 }
 
 type ContractSig struct {
-	PkX       [32]byte
-	PkYParity uint8
-	M         *big.Int // Message Hash
+	Pk [contractPkSize]byte // Pk contains the x-coordinate shifted left by 1 bit with parity in the LSB: (x << 1) | parity
+
+	M *big.Int // Message Hash
 
 	S       *big.Int
 	R       curve.Point
@@ -173,9 +192,8 @@ func (s ContractSig) String() string {
 	b := strings.Builder{}
 
 	b.WriteString("ContractSig{\n")
-	b.WriteString("  pkX                : 0x" + Bytes2Hex(s.PkX[:]) + "\n")
-	b.WriteString("  pkyparity          : " + strconv.FormatUint(uint64(s.PkYParity), 10) + "\n")
-	b.WriteString("  msghash            : 0x" + Bytes2Hex(LeftPadBytes(s.M.Bytes(), 32)) + "\n")
+	b.WriteString("  pk                 : 0x" + Bytes2Hex(s.Pk[:]) + "\n")
+	b.WriteString("  msg                : 0x" + Bytes2Hex(LeftPadBytes(s.M.Bytes(), 32)) + "\n")
 	b.WriteString("  s                  : 0x" + Bytes2Hex(LeftPadBytes(s.S.Bytes(), 32)) + "\n")
 	b.WriteString("  nonceTimesGAddress : 0x" + Bytes2Hex(s.Address[:]) + "\n")
 	b.WriteString("}\n")
@@ -184,7 +202,7 @@ func (s ContractSig) String() string {
 }
 
 func PublicKeyValidForContract(pk curve.Point) bool {
-	return !pk.XScalar().IsOverHalfOrder() // TODO: need more checks to match with smart contract.
+	return !pk.XScalar().IsOverHalfOrder()
 }
 
 // Verify checks if a signature equation actually holds.
