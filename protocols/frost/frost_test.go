@@ -13,6 +13,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/protocol"
 	"github.com/xlabs/multi-party-sig/pkg/taproot"
+	"github.com/xlabs/multi-party-sig/protocols/frost/sign"
 	common "github.com/xlabs/tss-common"
 )
 
@@ -23,19 +24,31 @@ var testTrackid = &common.TrackingID{
 }
 
 func do(t *testing.T, id party.ID, ids []party.ID, threshold int, message []byte, n *test.Network, wg *sync.WaitGroup) {
+	var cnfg *Config
 	defer wg.Done()
-	h, err := protocol.NewMultiHandler(Keygen(curve.Secp256k1{}, id, ids, threshold), testTrackid.ToByteString())
+	for i := 0; i < 10; i++ {
+		h, err := protocol.NewMultiHandler(Keygen(curve.Secp256k1{}, id, ids, threshold), testTrackid.ToByteString())
+		require.NoError(t, err)
+		test.HandlerLoop(id, h, n)
+		r, err := h.Result()
+		require.NoError(t, err)
+		require.IsType(t, &Config{}, r)
+		c0 := r.(*Config)
+		if sign.PublicKeyValidForContract(c0.PublicKey) {
+			fmt.Println("found valid public key. attempt #", i+1)
+			cnfg = c0
+			break
+		}
+		if i == 50 {
+			t.Fatalf("public key is not valid for contract after 50 attempts, something is wrong.")
+		}
+	}
+
+	c0 := cnfg
+	h, err := protocol.NewMultiHandler(Refresh(c0, ids), testTrackid.ToByteString())
 	require.NoError(t, err)
 	test.HandlerLoop(id, h, n)
 	r, err := h.Result()
-	require.NoError(t, err)
-	require.IsType(t, &Config{}, r)
-	c0 := r.(*Config)
-
-	h, err = protocol.NewMultiHandler(Refresh(c0, ids), testTrackid.ToByteString())
-	require.NoError(t, err)
-	test.HandlerLoop(id, h, n)
-	r, err = h.Result()
 	require.NoError(t, err)
 	require.IsType(t, &Config{}, r)
 	c := r.(*Config)

@@ -69,6 +69,7 @@ func TestPointToAddressCorrect(t *testing.T) {
 }
 
 func TestPointMarshalling(t *testing.T) {
+	t.Skip("this test is not relevant, until we receive a smart contract we can match it against.")
 	_, pk := genSpecificKeyPair(t)
 	binrep, err := marshalPointForContract(pk)
 	require.NoError(t, err)
@@ -131,8 +132,19 @@ func genSpecificKeyPair(t *testing.T) (curve.Scalar, curve.Point) {
 }
 
 func TestBasic(t *testing.T) {
-	secret := sample.Scalar(rand.Reader, curve.Secp256k1{})
-	public := secret.ActOnBase()
+	var secret curve.Scalar
+	var public curve.Point
+	count := 50 // number of attempts to find a valid public key
+	for i := 0; i < count; i++ {
+		secret = sample.Scalar(rand.Reader, curve.Secp256k1{})
+		public = secret.ActOnBase()
+		if PublicKeyValidForContract(public) {
+			break
+		}
+		if i == count-1 {
+			t.Fatalf("could not find a valid public key after %d attempts", count)
+		}
+	}
 
 	msgHash := [32]byte{1, 2, 3, 4, 5}
 
