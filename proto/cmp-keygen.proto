@@ -1,0 +1,46 @@
+syntax = "proto3";
+package xlabs.cmp.keygen;
+option go_package = "protocols/cmp/keygen";
+
+/*
+ * Represents Frost's keygen message 1.
+ */
+message Broadcast2{
+    // This message should be reliably broadcasted.
+    bytes Commitment = 1;
+}
+
+
+
+message Broadcast3 {
+	bytes RID = 1;
+	bytes C = 2; // types.RID
+
+	// VSSPolynomial = Fᵢ(X) VSSPolynomial
+	bytes VSSPolynomial = 3; // should check the Degree.
+	// SchnorrCommitments = Aᵢ Schnorr commitment for the final confirmation
+	bytes SchnorrCommitments =4; //*zksch.Commitment
+	bytes ElGamalPublic =5;
+	// N Paillier and Pedersen N = p•q, p ≡ q ≡ 3 mod 4
+	bytes N =6; //*saferith.Modulus ;
+	// S = r² mod N
+	bytes S = 7; // *saferith.Nat
+	// T = Sˡ mod N
+	bytes T = 8; // *saferith.Nat
+	// Decommitment = uᵢ decommitment bytes
+	bytes Decommitment = 9; // hash.Decommitment
+}
+message Message4 {
+	// Share = Encᵢ(x) is the encryption of the receivers share
+	bytes share = 1;  // *paillier.Ciphertext
+	bytes Fac   = 2; // *zkfac.Proof
+}
+
+message Broadcast4  {
+	bytes Mod = 1; // *zkmod.Proof
+	bytes Prm = 2; // *zkprm.Proof
+}
+
+message Broadcast5{
+	bytes SchnorrResponse = 1; // *zksch.Response
+}

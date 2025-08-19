@@ -52,20 +52,24 @@ func (c *Ciphertext) WriteTo(w io.Writer) (int64, error) {
 	var total int64
 	var n int
 
-	buf, err := c.L.MarshalBinary()
+	crv := c.L.Curve()
+
+	buf, err := crv.MarshalPoint(c.L)
 	if err != nil {
 		return 0, err
 	}
+
 	n, err = w.Write(buf)
 	total += int64(n)
 	if err != nil {
 		return total, err
 	}
 
-	buf, err = c.M.MarshalBinary()
+	buf, err = crv.MarshalPoint(c.M)
 	if err != nil {
 		return 0, err
 	}
+
 	n, err = w.Write(buf)
 	total += int64(n)
 	if err != nil {

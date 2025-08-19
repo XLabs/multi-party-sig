@@ -124,6 +124,32 @@ func (c *Commitment) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
+func (c *Commitment) MarshalBinary() ([]byte, error) {
+	return c.C.Curve().MarshalPoint(c.C)
+}
+
+func UnmarshalCommitment(data []byte, group curve.Curve) (*Commitment, error) {
+	point, err := group.UnmarshalPoint(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Commitment{C: point}, nil
+}
+
+func (r *Response) MarshalBinary() ([]byte, error) {
+	return r.Z.Curve().MarshalScalar(r.Z)
+}
+
+func UnmarshalResponse(data []byte, group curve.Curve) (*Response, error) {
+	scalar, err := group.UnmarshalScalar(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Response{group: group, Z: scalar}, nil
+}
+
 // Domain implements hash.WriterToWithDomain
 func (Commitment) Domain() string {
 	return "Schnorr Commitment"

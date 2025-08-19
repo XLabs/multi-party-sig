@@ -2,17 +2,18 @@ package keygen
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/xlabs/multi-party-sig/internal/types"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
-	"github.com/xlabs/multi-party-sig/pkg/paillier"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	zkfac "github.com/xlabs/multi-party-sig/pkg/zk/fac"
 	zkmod "github.com/xlabs/multi-party-sig/pkg/zk/mod"
 	zkprm "github.com/xlabs/multi-party-sig/pkg/zk/prm"
 	"github.com/xlabs/multi-party-sig/protocols/cmp/config"
+	common "github.com/xlabs/tss-common"
 )
 
 var _ round.Round = (*round4)(nil)
@@ -25,18 +26,9 @@ type round4 struct {
 	RID types.RID
 	// ChainKey is a sequence of random bytes agreed upon together
 	ChainKey types.RID
-}
 
-type message4 struct {
-	// Share = Encᵢ(x) is the encryption of the receivers share
-	Share *paillier.Ciphertext
-	Fac   *zkfac.Proof
-}
-
-type broadcast4 struct {
-	round.NormalBroadcastContent
-	Mod *zkmod.Proof
-	Prm *zkprm.Proof
+	validMod  map[party.ID]bool
+	validPrms map[party.ID]bool
 }
 
 // StoreBroadcastMessage implements round.BroadcastRound.
@@ -44,20 +36,28 @@ type broadcast4 struct {
 // - verify Mod, Prm proof for N
 func (r *round4) StoreBroadcastMessage(msg round.Message) error {
 	from := msg.From
-	body, ok := msg.Content.(*broadcast4)
-	if !ok || body == nil {
+	body, ok := msg.Content.(*Broadcast4)
+	if !ok || !body.ValidateBasic() {
 		return round.ErrInvalidContent
 	}
 
+	mod, prm, err := body.UnmarshalContent()
+	if err != nil {
+		return err
+	}
+
 	// verify zkmod
-	if !body.Mod.Verify(zkmod.Public{N: r.Pedersen[from].N()}, r.HashForID(from), r.Pool) {
+	if !mod.Verify(zkmod.Public{N: r.Pedersen[from].N()}, r.HashForID(from), r.Pool) {
 		return errors.New("failed to validate mod proof")
 	}
 
 	// verify zkprm
-	if !body.Prm.Verify(zkprm.Public{Aux: r.Pedersen[from]}, r.HashForID(from), r.Pool) {
+	if !prm.Verify(zkprm.Public{Aux: r.Pedersen[from]}, r.HashForID(from), r.Pool) {
 		return errors.New("failed to validate prm proof")
 	}
+
+	r.validMod[from] = true
+	r.validPrms[from] = true
 
 	return nil
 }
@@ -65,19 +65,26 @@ func (r *round4) StoreBroadcastMessage(msg round.Message) error {
 // VerifyMessage implements round.Round.
 //
 // - verify validity of share ciphertext.
+
+// TODO: Consider this a nil function, and modify the API of round.Round (verify the message inside StoreMessage).
 func (r *round4) VerifyMessage(msg round.Message) error {
 	from := msg.From
-	body, ok := msg.Content.(*message4)
-	if !ok || body == nil {
+	body, ok := msg.Content.(*Message4)
+	if !ok || !body.ValidateBasic() {
 		return round.ErrInvalidContent
 	}
 
-	if !r.PaillierPublic[msg.To].ValidateCiphertexts(body.Share) {
+	ctx, fac, err := body.UnmarshalContent()
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal Message4 content: %w", err)
+	}
+
+	if !r.PaillierPublic[msg.To].ValidateCiphertexts(ctx) {
 		return errors.New("invalid ciphertext")
 	}
 
 	// verify zkfac
-	if !body.Fac.Verify(zkfac.Public{N: r.PaillierPublic[from].N(), Aux: r.Pedersen[msg.To]}, r.HashForID(from)) {
+	if !fac.Verify(zkfac.Public{N: r.PaillierPublic[from].N(), Aux: r.Pedersen[msg.To]}, r.HashForID(from)) {
 		return errors.New("failed to validate fac proof")
 	}
 
@@ -91,13 +98,20 @@ func (r *round4) VerifyMessage(msg round.Message) error {
 // - check VSS condition.
 // - save share.
 func (r *round4) StoreMessage(msg round.Message) error {
-	from, body := msg.From, msg.Content.(*message4)
+	from, body := msg.From, msg.Content.(*Message4)
+	// TODO: I think that verify should store after verification the ctxShare and use it here instead of unmarshalling.
+	//       Note that round.Message in the original code is *message4, which is in unmarshaled representation.
+	share, _, err := body.UnmarshalContent()
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal Message4 content: %w", err)
+	}
 
 	// decrypt share
-	DecryptedShare, err := r.PaillierSecret.Dec(body.Share)
+	DecryptedShare, err := r.PaillierSecret.Dec(share)
 	if err != nil {
 		return err
 	}
+
 	Share := r.Group().NewScalar().SetNat(DecryptedShare.Mod(r.Group().Order()))
 	if DecryptedShare.Eq(curve.MakeInt(Share)) != 1 {
 		return errors.New("decrypted share is not in correct range")
@@ -123,7 +137,7 @@ func (r *round4) StoreMessage(msg round.Message) error {
 // - validate Config
 // - write new ssid hash to old hash state
 // - create proof of knowledge of secret.
-func (r *round4) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round4) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	// add all shares to our secret
 	UpdatedSecretECDSA := r.Group().NewScalar()
 	if r.PreviousSecretECDSA != nil {
@@ -179,30 +193,50 @@ func (r *round4) Finalize(out chan<- *round.Message) (round.Session, error) {
 
 	proof := r.SchnorrRand.Prove(h, PublicData[r.SelfID()].ECDSA, UpdatedSecretECDSA, nil)
 
+	broadcast5, err := makeBroadcast5(proof)
+	if err != nil {
+		return r, err
+	}
+
 	// send to all
-	err = r.BroadcastMessage(out, &broadcast5{SchnorrResponse: proof})
+	err = r.BroadcastMessage(out, broadcast5)
 	if err != nil {
 		return r, err
 	}
 
 	r.UpdateHashState(UpdatedConfig)
 	return &round5{
-		round4:        r,
-		UpdatedConfig: UpdatedConfig,
+		round4:           r,
+		UpdatedConfig:    UpdatedConfig,
+		validSchnorrResp: map[party.ID]bool{r.SelfID(): true},
 	}, nil
 }
 
-// RoundNumber implements round.Content.
-func (message4) RoundNumber() round.Number { return 4 }
-
 // MessageContent implements round.Round.
-func (round4) MessageContent() round.Content { return &message4{} }
-
-// RoundNumber implements round.Content.
-func (broadcast4) RoundNumber() round.Number { return 4 }
+func (round4) MessageContent() round.Content { return &Message4{} }
 
 // BroadcastContent implements round.BroadcastRound.
-func (round4) BroadcastContent() round.BroadcastContent { return &broadcast4{} }
+func (round4) BroadcastContent() round.BroadcastContent {
+	return &Broadcast4{
+		Mod: []byte{},
+		Prm: []byte{},
+	}
+}
 
 // Number implements round.Round.
 func (round4) Number() round.Number { return 4 }
+
+func (r *round4) CanFinalize() bool {
+	// should ensure each party sent validMod and validPrms
+	for _, p := range r.PartyIDs() {
+		if !r.validMod[p] || !r.validPrms[p] {
+			return false
+		}
+
+		if _, ok := r.ShareReceived[p]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
