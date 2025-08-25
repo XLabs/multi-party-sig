@@ -6,11 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/internal/test"
-	"github.com/taurusgroup/multi-party-sig/pkg/ecdsa"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
-	"github.com/taurusgroup/multi-party-sig/pkg/pool"
+	"github.com/xlabs/multi-party-sig/internal/test"
+	"github.com/xlabs/multi-party-sig/pkg/ecdsa"
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/pool"
+	"github.com/xlabs/multi-party-sig/pkg/round"
 	"golang.org/x/crypto/sha3"
 )
 

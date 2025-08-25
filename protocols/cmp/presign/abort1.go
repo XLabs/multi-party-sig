@@ -4,12 +4,12 @@ import (
 	"errors"
 
 	"github.com/cronokirby/saferith"
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/pkg/hash"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/arith"
-	"github.com/taurusgroup/multi-party-sig/pkg/paillier"
-	"github.com/taurusgroup/multi-party-sig/pkg/party"
-	zknth "github.com/taurusgroup/multi-party-sig/pkg/zk/nth"
+	"github.com/xlabs/multi-party-sig/pkg/hash"
+	"github.com/xlabs/multi-party-sig/pkg/math/arith"
+	"github.com/xlabs/multi-party-sig/pkg/paillier"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/round"
+	zknth "github.com/xlabs/multi-party-sig/pkg/zk/nth"
 )
 
 var _ round.Round = (*abort1)(nil)

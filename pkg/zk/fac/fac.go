@@ -4,10 +4,10 @@ import (
 	"crypto/rand"
 
 	"github.com/cronokirby/saferith"
-	"github.com/taurusgroup/multi-party-sig/pkg/hash"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/arith"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/sample"
-	"github.com/taurusgroup/multi-party-sig/pkg/pedersen"
+	"github.com/xlabs/multi-party-sig/pkg/hash"
+	"github.com/xlabs/multi-party-sig/pkg/math/arith"
+	"github.com/xlabs/multi-party-sig/pkg/math/sample"
+	"github.com/xlabs/multi-party-sig/pkg/pedersen"
 )
 
 type Public struct {
