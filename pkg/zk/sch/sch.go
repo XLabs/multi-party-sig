@@ -4,9 +4,9 @@ import (
 	"crypto/rand"
 	"io"
 
-	"github.com/taurusgroup/multi-party-sig/pkg/hash"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/sample"
+	"github.com/xlabs/multi-party-sig/pkg/hash"
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 )
 
 // Randomness = a ← ℤₚ.
@@ -116,7 +116,7 @@ func (p *Proof) Verify(hash *hash.Hash, public, gen curve.Point) bool {
 
 // WriteTo implements io.WriterTo.
 func (c *Commitment) WriteTo(w io.Writer) (int64, error) {
-	data, err := c.C.MarshalBinary()
+	data, err := c.C.Curve().MarshalPoint(c.C)
 	if err != nil {
 		return 0, err
 	}

@@ -3,15 +3,18 @@ package sign
 import (
 	"crypto/rand"
 
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
-	"github.com/taurusgroup/multi-party-sig/pkg/math/sample"
-	"github.com/taurusgroup/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/math/sample"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/round"
+	common "github.com/xlabs/tss-common"
+
 	"github.com/zeebo/blake3"
 )
 
 // This round sort of corresponds with Figure 2 of the Frost paper:
-//   https://eprint.iacr.org/2020/852.pdf
+//
+//	https://eprint.iacr.org/2020/852.pdf
 //
 // The main difference is that instead of having a separate pre-processing step,
 // we instead have an additional round at the start of the signing step.
@@ -48,10 +51,15 @@ type round1 struct {
 func (r *round1) VerifyMessage(round.Message) error { return nil }
 func (r *round1) StoreMessage(round.Message) error  { return nil }
 
-const deriveHashKeyContext = "github.com/taurusgroup/multi-party-sig/frost 2021-07-30T09:48+00:00 Derive hash Key"
+const deriveHashKeyContext = "github.com/xlabs/multi-party-sig/frost 2025-07-27T13:55:19+00:00 Derive hash Key"
+
+func (r *round1) CanFinalize() bool {
+	// round1 is ready to finalize, since it doesn't depend on anyone else's.
+	return true
+}
 
 // Finalize implements round.Round.
-func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	// We can think of this as roughly implementing Figure 2. The idea is
 	// to generate two nonces (dᵢ, eᵢ) in Z/(q)ˣ, then two commitments
 	// Dᵢ = dᵢ * G, Eᵢ = eᵢ * G, and then broadcast them.
@@ -64,7 +72,7 @@ func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
 	//
 	// This protects against bad randomness, since a constant value for a is still unpredictable,
 	// and fault attacks against the hash function, because of the randomness.
-	s_iBytes, err := r.s_i.MarshalBinary()
+	s_iBytes, err := r.Group().MarshalScalar(r.s_i)
 	if err != nil {
 		return r, err
 	}
@@ -79,17 +87,22 @@ func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
 	_, _ = nonceHasher.Write(a)
 	nonceDigest := nonceHasher.Digest()
 
-	d_i := sample.ScalarUnit(nonceDigest, r.Group())
+	d_i := sample.ScalarUnit(nonceDigest, r.Group()) // reads randomness from the nonceDigest generator.
 	e_i := sample.ScalarUnit(nonceDigest, r.Group())
 
-	D_i := d_i.ActOnBase()
-	E_i := e_i.ActOnBase()
+	D_i := d_i.ActOnBase() // diG
+	E_i := e_i.ActOnBase() // eiG
 
 	// Broadcast the commitments
-	err = r.BroadcastMessage(out, &broadcast2{D_i: D_i, E_i: E_i})
+	b, err := makeBroadcast2Message(D_i, E_i)
 	if err != nil {
 		return r, err
 	}
+
+	if err = r.BroadcastMessage(out, b); err != nil {
+		return r, err
+	}
+
 	return &round2{
 		round1: r,
 		d_i:    d_i,

@@ -3,10 +3,11 @@ package sign
 import (
 	"fmt"
 
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/pkg/party"
-	"github.com/taurusgroup/multi-party-sig/pkg/protocol"
-	"github.com/taurusgroup/multi-party-sig/protocols/frost/keygen"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/protocol"
+	"github.com/xlabs/multi-party-sig/pkg/round"
+	"github.com/xlabs/multi-party-sig/protocols/frost/keygen"
+	common "github.com/xlabs/tss-common"
 )
 
 const (
@@ -22,10 +23,17 @@ func StartSignCommon(taproot bool, result *keygen.Config, signers []party.ID, me
 		info := round.Info{
 			FinalRoundNumber: protocolRounds,
 			SelfID:           result.ID,
-			PartyIDs:         signers,
+			PartyIDs:         party.NewIDSlice(signers), // ensures sorted order
 			Threshold:        result.Threshold,
 			Group:            result.PublicKey.Curve(),
+			ProtocolID:       protocolID,
+			TrackingID:       &common.TrackingID{},
 		}
+
+		if err := info.TrackingID.FromString(string(sessionID)); err != nil {
+			return nil, fmt.Errorf("sign.StartSign: %w", err)
+		}
+
 		if taproot {
 			info.ProtocolID = protocolIDTaproot
 		} else {

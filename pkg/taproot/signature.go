@@ -8,7 +8,7 @@ import (
 	"io"
 	"sync/atomic"
 
-	"github.com/taurusgroup/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 )
 
 // TaggedHash addes some domain separation to SHA-256.
@@ -159,7 +159,11 @@ func (sk SecretKey) Sign(rand io.Reader, m []byte) (Signature, error) {
 	_ = e.UnmarshalBinary(eHash)
 
 	z := e.Mul(d).Add(k)
-	zBytes, _ := z.MarshalBinary()
+
+	zBytes, err := z.Curve().MarshalScalar(z)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal z: %w", err)
+	}
 
 	sig := make([]byte, 0, SignatureLen)
 	sig = append(sig, RBytes...)

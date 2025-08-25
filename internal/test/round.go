@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 
-	"github.com/fxamacker/cbor/v2"
-	"github.com/taurusgroup/multi-party-sig/internal/round"
-	"github.com/taurusgroup/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/round"
+	common "github.com/xlabs/tss-common"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/proto"
 )
 
 // Rule describes various hooks that can be applied to a protocol execution.
@@ -27,31 +29,51 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 		roundType reflect.Type
 		errGroup  errgroup.Group
 		N         = len(rounds)
-		out       = make(chan *round.Message, N*(N+1))
+		out       = make(chan common.ParsedMessage, N*(N+1))
 	)
 
 	if roundType, err = checkAllRoundsSame(rounds); err != nil {
 		return err, false
 	}
+
+	mtx := sync.Mutex{}
+
 	// get the second set of messages
 	for id := range rounds {
 		idx := id
 		r := rounds[idx]
 		errGroup.Go(func() error {
+			mtx.Lock()
+			defer mtx.Unlock()
+
 			var rNew, rNewReal round.Session
 			if rule != nil {
 				rReal := getRound(r)
 				rule.ModifyBefore(rReal)
-				outFake := make(chan *round.Message, N+1)
+				outFake := make(chan common.ParsedMessage, N+1)
+				// Rounds should finish at this point, so we ensure that
+				// they utilise the CanFinalize method correctly.
+				if !r.CanFinalize() {
+					return errors.New("cannot finalize")
+				}
+
 				rNew, err = r.Finalize(outFake)
 				close(outFake)
 				rNewReal = getRound(rNew)
 				rule.ModifyAfter(rNewReal)
 				for msg := range outFake {
-					rule.ModifyContent(rNewReal, msg.To, getContent(msg.Content))
+					var to party.ID
+					if msg.GetTo() != nil {
+						to = party.FromTssID(msg.GetTo())
+					}
+
+					rule.ModifyContent(rNewReal, to, getContent(msg.Content()))
 					out <- msg
 				}
 			} else {
+				if !r.CanFinalize() {
+					return errors.New("cannot finalize")
+				}
 				rNew, err = r.Finalize(out)
 			}
 
@@ -82,35 +104,43 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 	}
 
 	for msg := range out {
-		msgBytes, err := cbor.Marshal(msg.Content)
-		if err != nil {
-			return err, false
-		}
+		// Sending mechanism for testing...
 		for _, r := range rounds {
-			m := *msg
+			cntnt := proto.CloneOf(msg.Content())
+
+			tid := proto.CloneOf(msg.WireMsg().TrackingID)
+
 			r := r
-			if msg.From == r.SelfID() || msg.Content.RoundNumber() != r.Number() {
+			if party.FromTssID(msg.GetFrom()) == r.SelfID() || round.Number(msg.Content().RoundNumber()) != r.Number() {
 				continue
 			}
+
 			errGroup.Go(func() error {
-				if m.Broadcast {
+
+				m := round.Message{
+					From:       party.FromTssID(msg.GetFrom()),
+					To:         "",
+					Broadcast:  false,
+					Content:    cntnt,
+					TrackingID: tid,
+				}
+
+				mtx.Lock()
+				defer mtx.Unlock()
+
+				if msg.IsBroadcast() {
+					m.Broadcast = true
+
 					b, ok := r.(round.BroadcastRound)
 					if !ok {
 						return errors.New("broadcast message but not broadcast round")
-					}
-					m.Content = b.BroadcastContent()
-					if err = cbor.Unmarshal(msgBytes, m.Content); err != nil {
-						return err
 					}
 
 					if err = b.StoreBroadcastMessage(m); err != nil {
 						return err
 					}
 				} else {
-					m.Content = r.MessageContent()
-					if err = cbor.Unmarshal(msgBytes, m.Content); err != nil {
-						return err
-					}
+					m.To = party.FromTssID(msg.GetTo())
 
 					if m.To == "" || m.To == r.SelfID() {
 						if err = r.VerifyMessage(m); err != nil {
