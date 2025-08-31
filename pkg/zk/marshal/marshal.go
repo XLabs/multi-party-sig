@@ -1,0 +1,84 @@
+package marshal
+
+import (
+	"bytes"
+	"encoding"
+	"encoding/binary"
+	"errors"
+	"math"
+)
+
+var (
+	ErrSizeOverflow    = errors.New("part of the proof is too large to encode as uint16")
+	ErrInvalidDataSize = errors.New("data is too short to contain unmarshal sizes")
+	errNilItem         = errors.New("nil item found")
+)
+
+// Since ZK proofs use relatively little memory, we store their numbers in uint16.
+
+// WriteItemsToBuffer writes uint16 sizes for each item, then marshal
+// each item and appends it to the buffer.
+func WriteItemsToBuffer(buf *bytes.Buffer, toMarshal []encoding.BinaryMarshaler) error {
+	items := make([][]byte, len(toMarshal))
+	totalLength := 0
+
+	for i, item := range toMarshal {
+		if item == nil {
+			return errNilItem
+		}
+		b, err := item.MarshalBinary()
+		if err != nil {
+			return err
+		}
+
+		if len(b) > math.MaxUint16 {
+			return ErrSizeOverflow
+		}
+
+		items[i] = b
+		totalLength += len(b)
+	}
+
+	buf.Grow(totalLength + 2*len(items)) // 2 bytes per size
+
+	for _, b := range items {
+		var tmp [2]byte
+		binary.BigEndian.PutUint16(tmp[:], uint16(len(b)))
+		_, _ = buf.Write(tmp[:]) // ignoring err since doc states it is always nil.
+	}
+
+	for _, b := range items {
+		_, _ = buf.Write(b) // ignoring err since doc states it is always nil.
+	}
+	return nil
+}
+
+// ReadUint16Sizes reads numItems big-endian uint16 sizes from data, returning
+// the sizes and the remaining data. It fails fast if data is too short.
+func ReadUint16Sizes(numItems int, data []byte) ([]int, []byte, error) {
+	need := 2 * numItems
+	if len(data) < need {
+		return nil, data, ErrInvalidDataSize
+	}
+
+	sizes := make([]int, numItems)
+	for i := 0; i < numItems; i++ {
+		sizes[i] = int(binary.BigEndian.Uint16(data[:2]))
+		data = data[2:]
+	}
+
+	// ensure sufficient data remains
+	if len(data) < sum(sizes) {
+		return nil, data, ErrInvalidDataSize
+	}
+
+	return sizes, data, nil
+}
+
+func sum(sizes []int) int {
+	total := 0
+	for _, size := range sizes {
+		total += size
+	}
+	return total
+}

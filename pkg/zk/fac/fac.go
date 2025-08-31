@@ -1,13 +1,17 @@
 package zkfac
 
 import (
+	"bytes"
 	"crypto/rand"
+	"encoding"
+	"errors"
 
 	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
 	"github.com/xlabs/multi-party-sig/pkg/math/arith"
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
+	"github.com/xlabs/multi-party-sig/pkg/zk/marshal"
 )
 
 type Public struct {
@@ -148,4 +152,143 @@ func challenge(hash *hash.Hash, public Public, commitment Commitment) (*saferith
 	// be +-2^eps.
 	return sample.IntervalL(hash.Digest()), nil
 	// return sample.IntervalEps(hash.Digest()), nil
+}
+
+var (
+	errInvalidCommitment = errors.New("invalid fac commitment")
+	errInvalidProof      = errors.New("invalid fac proof")
+)
+
+func (c *Commitment) MarshalBinary() ([]byte, error) {
+	if c == nil || c.P == nil || c.Q == nil || c.A == nil || c.B == nil || c.T == nil {
+		return nil, errInvalidCommitment
+	}
+
+	buf := bytes.NewBuffer(nil)
+
+	items := []encoding.BinaryMarshaler{c.P, c.Q, c.A, c.B, c.T}
+	if err := marshal.WriteItemsToBuffer(buf, items); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (c *Commitment) UnmarshalBinary(data []byte) ([]byte, error) {
+	if c == nil {
+		return nil, errInvalidCommitment
+	}
+
+	sz, rest, err := marshal.ReadUint16Sizes(5, data)
+	if err != nil {
+		return nil, errInvalidCommitment
+	}
+
+	c.P = new(saferith.Nat)
+	if err = c.P.UnmarshalBinary(rest[:sz[0]]); err != nil {
+		return nil, err
+	}
+	rest = rest[sz[0]:]
+
+	c.Q = new(saferith.Nat)
+	if err = c.Q.UnmarshalBinary(rest[:sz[1]]); err != nil {
+		return nil, err
+	}
+	rest = rest[sz[1]:]
+
+	c.A = new(saferith.Nat)
+	if err = c.A.UnmarshalBinary(rest[:sz[2]]); err != nil {
+		return nil, err
+	}
+	rest = rest[sz[2]:]
+
+	c.B = new(saferith.Nat)
+	if err = c.B.UnmarshalBinary(rest[:sz[3]]); err != nil {
+		return nil, err
+	}
+	rest = rest[sz[3]:]
+
+	c.T = new(saferith.Nat)
+	if err = c.T.UnmarshalBinary(rest[:sz[4]]); err != nil {
+		return nil, err
+	}
+	rest = rest[sz[4]:]
+
+	return rest, nil
+}
+
+func (p *Proof) MarshalBinary() ([]byte, error) {
+	if p == nil || p.Sigma == nil || p.Z1 == nil || p.Z2 == nil || p.W1 == nil || p.W2 == nil || p.V == nil {
+		return nil, errInvalidProof
+	}
+
+	bts, err := p.Comm.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBuffer(bts)
+
+	items := []encoding.BinaryMarshaler{p.Sigma, p.Z1, p.Z2, p.W1, p.W2, p.V}
+	if err := marshal.WriteItemsToBuffer(buf, items); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (p *Proof) UnmarshalBinary(data []byte) error {
+	if p == nil {
+		return errInvalidProof
+	}
+
+	remaining, err := p.Comm.UnmarshalBinary(data)
+	if err != nil {
+		return err
+	}
+	data = remaining
+
+	// Unmarshal the rest of the proof
+	sz, rest, err := marshal.ReadUint16Sizes(6, data)
+	if err != nil {
+		return errInvalidProof
+	}
+
+	p.Sigma = new(saferith.Int)
+	if err = p.Sigma.UnmarshalBinary(rest[:sz[0]]); err != nil {
+		return err
+	}
+	rest = rest[sz[0]:]
+
+	p.Z1 = new(saferith.Int)
+	if err = p.Z1.UnmarshalBinary(rest[:sz[1]]); err != nil {
+		return err
+	}
+	rest = rest[sz[1]:]
+
+	p.Z2 = new(saferith.Int)
+	if err = p.Z2.UnmarshalBinary(rest[:sz[2]]); err != nil {
+		return err
+	}
+	rest = rest[sz[2]:]
+
+	p.W1 = new(saferith.Int)
+	if err = p.W1.UnmarshalBinary(rest[:sz[3]]); err != nil {
+		return err
+	}
+	rest = rest[sz[3]:]
+
+	p.W2 = new(saferith.Int)
+	if err = p.W2.UnmarshalBinary(rest[:sz[4]]); err != nil {
+		return err
+	}
+	rest = rest[sz[4]:]
+
+	p.V = new(saferith.Int)
+	if err = p.V.UnmarshalBinary(rest[:sz[5]]); err != nil {
+		return err
+	}
+	rest = rest[sz[5]:]
+
+	return nil
 }

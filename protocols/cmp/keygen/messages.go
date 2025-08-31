@@ -20,7 +20,7 @@ import (
 
 // GetProtocol implements round.Content.
 func (b *Broadcast2) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return common.ProtocolECDSA // TODO: Should we add some modifier? stating this is ecdsa:keygen?
 }
 
 // Reliable implements round.ReliableBroadcastContent.
@@ -197,7 +197,7 @@ func makeMessage4(
 		return nil, err
 	}
 
-	facBytes, err := cbor.Marshal(fac)
+	facBytes, err := fac.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
@@ -235,8 +235,7 @@ func (x *Message4) UnmarshalContent() (*paillier.Ciphertext, *zkfac.Proof, error
 	}
 
 	fac := &zkfac.Proof{}
-	// TODO: unmarshalling with cbor is not safe.
-	if err := cbor.Unmarshal(x.Fac, fac); err != nil {
+	if err := fac.UnmarshalBinary(x.Fac); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal Fac proof: %w", err)
 	}
 

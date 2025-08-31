@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding"
-	"encoding/binary"
 	"errors"
-	"math"
 
 	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
@@ -15,6 +13,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/paillier"
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
+	"github.com/xlabs/multi-party-sig/pkg/zk/marshal"
 )
 
 type Public struct {
@@ -147,9 +146,6 @@ func challenge(hash *hash.Hash, group curve.Curve, public Public, commitment *Co
 var (
 	errInvalidCommitment = errors.New("invalid commitment")
 	errInvalidProof      = errors.New("invalid proof")
-
-	errSizeOverflow    = errors.New("part of the proof is too large to encode as uint16")
-	errInvalidDataSize = errors.New("data is too short to contain unmarshal sizes")
 )
 
 func (c *Commitment) MarshalBinary() ([]byte, error) {
@@ -160,36 +156,11 @@ func (c *Commitment) MarshalBinary() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 
 	items := []encoding.BinaryMarshaler{c.S, c.A, c.C}
-	if err := writeItemsToBuffer(buf, items); err != nil {
+	if err := marshal.WriteItemsToBuffer(buf, items); err != nil {
 		return nil, err
 	}
 
 	return buf.Bytes(), nil
-}
-
-// readUint16Sizes reads numItems big-endian uint16 sizes from data, returning
-// the sizes and the remaining data. It fails fast if data is too short.
-func readUint16Sizes(numItems int, data []byte) ([]int, []byte, error) {
-	need := 2 * numItems
-	if len(data) < need {
-		return nil, data, errInvalidDataSize
-	}
-
-	sizes := make([]int, numItems)
-	for i := 0; i < numItems; i++ {
-		sizes[i] = int(binary.BigEndian.Uint16(data[:2]))
-		data = data[2:]
-	}
-
-	return sizes, data, nil
-}
-
-func sum(sizes []int) int {
-	total := 0
-	for _, size := range sizes {
-		total += size
-	}
-	return total
 }
 
 // UnmarshalBinary unmarshals a Commitment from data and returns the remaining bytes.
@@ -198,12 +169,8 @@ func (c *Commitment) UnmarshalBinary(data []byte) ([]byte, error) {
 		return nil, errInvalidCommitment
 	}
 
-	sz, data, err := readUint16Sizes(3, data)
+	sz, data, err := marshal.ReadUint16Sizes(3, data)
 	if err != nil {
-		return nil, errInvalidCommitment
-	}
-
-	if len(data) < sum(sz) {
 		return nil, errInvalidCommitment
 	}
 
@@ -240,43 +207,11 @@ func (p *Proof) MarshalBinary() ([]byte, error) {
 
 	buf := bytes.NewBuffer(commitmentBytes)
 
-	if err := writeItemsToBuffer(buf, []encoding.BinaryMarshaler{p.Z1, p.Z2, p.Z3}); err != nil {
+	if err := marshal.WriteItemsToBuffer(buf, []encoding.BinaryMarshaler{p.Z1, p.Z2, p.Z3}); err != nil {
 		return nil, err
 	}
 
 	return buf.Bytes(), nil
-}
-
-// writeItemsToBuffer writes uint16 sizes for each item, then marshal
-// each item and appends it to the buffer.
-func writeItemsToBuffer(buf *bytes.Buffer, toMarshal []encoding.BinaryMarshaler) error {
-	items := make([][]byte, len(toMarshal))
-	totalLength := 0
-
-	for i, item := range toMarshal {
-		b, err := item.MarshalBinary()
-		if err != nil {
-			return err
-		}
-		if len(b) > math.MaxUint16 {
-			return errSizeOverflow
-		}
-		items[i] = b
-		totalLength += len(b)
-	}
-
-	buf.Grow(totalLength + 2*len(items)) // 2 bytes per size
-
-	for _, b := range items {
-		var tmp [2]byte
-		binary.BigEndian.PutUint16(tmp[:], uint16(len(b)))
-		_, _ = buf.Write(tmp[:]) // ignoring err since doc states it is always nil.
-	}
-
-	for _, b := range items {
-		_, _ = buf.Write(b) // ignoring err since doc states it is always nil.
-	}
-	return nil
 }
 
 // UnmarshalBinary unmarshals a Proof from data.
@@ -295,11 +230,8 @@ func (p *Proof) UnmarshalBinary(data []byte) error {
 	data = remaining
 
 	// z1, z2, z3
-	sz, rest, err := readUint16Sizes(3, data)
+	sz, rest, err := marshal.ReadUint16Sizes(3, data)
 	if err != nil {
-		return errInvalidProof
-	}
-	if len(rest) < sum(sz) {
 		return errInvalidProof
 	}
 
