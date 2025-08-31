@@ -1,7 +1,6 @@
 package cmp
 
 import (
-	"github.com/xlabs/multi-party-sig/pkg/ecdsa"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/pool"
@@ -9,7 +8,6 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	"github.com/xlabs/multi-party-sig/protocols/cmp/config"
 	"github.com/xlabs/multi-party-sig/protocols/cmp/keygen"
-	"github.com/xlabs/multi-party-sig/protocols/cmp/presign"
 	"github.com/xlabs/multi-party-sig/protocols/cmp/sign"
 )
 
@@ -70,12 +68,12 @@ func Sign(config *Config, signers []party.ID, messageHash []byte, pl *pool.Pool)
 // to produce a full signature with the PresignOnline protocol.
 // Note: the PreSignatures should be treated as secret key material.
 // Returns *ecdsa.PreSignature if successful.
-func Presign(config *Config, signers []party.ID, pl *pool.Pool) protocol.StartFunc {
-	return presign.StartPresign(config, signers, nil, pl)
-}
+// func Presign(config *Config, signers []party.ID, pl *pool.Pool) protocol.StartFunc {
+// 	return presign.StartPresign(config, signers, nil, pl)
+// }
 
 // PresignOnline efficiently generates an ECDSA signature for `messageHash` given a preprocessed `PreSignature`.
 // Returns *ecdsa.Signature if successful.
-func PresignOnline(config *Config, preSignature *ecdsa.PreSignature, messageHash []byte, pl *pool.Pool) protocol.StartFunc {
-	return presign.StartPresignOnline(config, preSignature, messageHash, pl)
-}
+// func PresignOnline(config *Config, preSignature *ecdsa.PreSignature, messageHash []byte, pl *pool.Pool) protocol.StartFunc {
+// 	return presign.StartPresignOnline(config, preSignature, messageHash, pl)
+// }

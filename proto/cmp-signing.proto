@@ -1,0 +1,9 @@
+syntax = "proto3";
+package xlabs.cmp.sign;
+option go_package = "protocols/cmp/sign";
+
+
+message Broadcast2{
+    
+}
+

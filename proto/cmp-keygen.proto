@@ -2,9 +2,6 @@ syntax = "proto3";
 package xlabs.cmp.keygen;
 option go_package = "protocols/cmp/keygen";
 
-/*
- * Represents Frost's keygen message 1.
- */
 message Broadcast2{
     // This message should be reliably broadcasted.
     bytes Commitment = 1;

@@ -45,26 +45,27 @@ func do(t *testing.T, id party.ID, ids []party.ID, threshold int, message []byte
 	signature := signResult.(*ecdsa.Signature)
 	assert.True(t, signature.Verify(c.PublicPoint(), message))
 
-	h, err = protocol.NewMultiHandler(Presign(c, ids, pl), nil)
-	require.NoError(t, err)
+	// TODO: tests presigned - once the subpackage is returned:
+	// h, err = protocol.NewMultiHandler(Presign(c, ids, pl), nil)
+	// require.NoError(t, err)
 
-	test.HandlerLoop(c.ID, h, n)
+	// test.HandlerLoop(c.ID, h, n)
 
-	signResult, err = h.Result()
-	require.NoError(t, err)
-	require.IsType(t, &ecdsa.PreSignature{}, signResult)
-	preSignature := signResult.(*ecdsa.PreSignature)
-	assert.NoError(t, preSignature.Validate())
+	// signResult, err = h.Result()
+	// require.NoError(t, err)
+	// require.IsType(t, &ecdsa.PreSignature{}, signResult)
+	// preSignature := signResult.(*ecdsa.PreSignature)
+	// assert.NoError(t, preSignature.Validate())
 
-	h, err = protocol.NewMultiHandler(PresignOnline(c, preSignature, message, pl), nil)
-	require.NoError(t, err)
-	test.HandlerLoop(c.ID, h, n)
+	// h, err = protocol.NewMultiHandler(PresignOnline(c, preSignature, message, pl), nil)
+	// require.NoError(t, err)
+	// test.HandlerLoop(c.ID, h, n)
 
-	signResult, err = h.Result()
-	require.NoError(t, err)
-	require.IsType(t, &ecdsa.Signature{}, signResult)
-	signature = signResult.(*ecdsa.Signature)
-	assert.True(t, signature.Verify(c.PublicPoint(), message))
+	// signResult, err = h.Result()
+	// require.NoError(t, err)
+	// require.IsType(t, &ecdsa.Signature{}, signResult)
+	// signature = signResult.(*ecdsa.Signature)
+	// assert.True(t, signature.Verify(c.PublicPoint(), message))
 }
 
 func TestCMP(t *testing.T) {
@@ -155,9 +156,9 @@ func TestStart(t *testing.T) {
 			t.Log(err)
 			assert.Error(t, err)
 
-			_, err = Presign(c, tt.partyIDs, pl)(nil)
-			t.Log(err)
-			assert.Error(t, err)
+			// _, err = Presign(c, tt.partyIDs, pl)(nil)
+			// t.Log(err)
+			// assert.Error(t, err)
 		})
 	}
 }
