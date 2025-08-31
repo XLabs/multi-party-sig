@@ -33,18 +33,21 @@ func (sig Signature) Verify(X curve.Point, hash []byte) bool {
 }
 
 // get a signature in ethereum format
-func (sig Signature) SigEthereum() ([]byte, error) {
+func (sig *Signature) SigEthereum() ([]byte, error) {
 	IsOverHalfOrder := sig.S.IsOverHalfOrder() // s-values greater than secp256k1n/2 are considered invalid
 
 	if IsOverHalfOrder {
 		sig.S.Negate()
 	}
 
-	r, err := sig.R.MarshalBinary()
+	crv := sig.R.Curve()
+
+	r, err := crv.MarshalPoint(sig.R)
 	if err != nil {
 		return nil, err
 	}
-	s, err := sig.S.MarshalBinary()
+
+	s, err := crv.MarshalScalar(sig.S)
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +67,12 @@ func (sig Signature) SigEthereum() ([]byte, error) {
 	}
 
 	r[0] = rs[64] + 2
-	if err := sig.R.UnmarshalBinary(r); err != nil {
+
+	pnt, err := crv.UnmarshalPoint(r)
+	if err != nil {
 		return nil, err
 	}
+	sig.R = pnt
 
 	return rs, nil
 }

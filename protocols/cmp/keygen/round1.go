@@ -14,6 +14,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	zksch "github.com/xlabs/multi-party-sig/pkg/zk/sch"
+	common "github.com/xlabs/tss-common"
 )
 
 var _ round.Round = (*round1)(nil)
@@ -60,7 +61,7 @@ func (r *round1) StoreMessage(round.Message) error { return nil }
 // - sample ridᵢ <- {0,1}ᵏ
 // - sample cᵢ <- {0,1}ᵏ
 // - commit to message.
-func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	// generate Paillier and Pedersen
 	PaillierSecret := paillier.NewSecretKey(nil)
 	SelfPaillierPublic := PaillierSecret.PublicKey
@@ -96,7 +97,7 @@ func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
 	}
 
 	// should be broadcast but we don't need that here
-	msg := &broadcast2{Commitment: SelfCommitment}
+	msg := &Broadcast2{Commitment: SelfCommitment}
 	err = r.BroadcastMessage(out, msg)
 	if err != nil {
 		return r, err
@@ -129,3 +130,8 @@ func (round1) MessageContent() round.Content { return nil }
 
 // Number implements round.Round.
 func (round1) Number() round.Number { return 1 }
+
+func (round1) CanFinalize() bool {
+	// First round doesn't wait for messages from previous rounds
+	return true
+}

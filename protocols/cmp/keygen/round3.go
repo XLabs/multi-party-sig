@@ -4,12 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/internal/types"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
 	"github.com/xlabs/multi-party-sig/pkg/math/arith"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
-	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
 	"github.com/xlabs/multi-party-sig/pkg/paillier"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
@@ -18,6 +16,7 @@ import (
 	zkmod "github.com/xlabs/multi-party-sig/pkg/zk/mod"
 	zkprm "github.com/xlabs/multi-party-sig/pkg/zk/prm"
 	zksch "github.com/xlabs/multi-party-sig/pkg/zk/sch"
+	common "github.com/xlabs/tss-common"
 )
 
 var _ round.Round = (*round3)(nil)
@@ -29,25 +28,10 @@ type round3 struct {
 	SchnorrCommitments map[party.ID]*zksch.Commitment // Aⱼ
 }
 
-type broadcast3 struct {
-	round.NormalBroadcastContent
-	// RID = RIDᵢ
-	RID types.RID
-	C   types.RID
-	// VSSPolynomial = Fᵢ(X) VSSPolynomial
-	VSSPolynomial *polynomial.Exponent
-	// SchnorrCommitments = Aᵢ Schnorr commitment for the final confirmation
-	SchnorrCommitments *zksch.Commitment
-	ElGamalPublic      curve.Point
-	// N Paillier and Pedersen N = p•q, p ≡ q ≡ 3 mod 4
-	N *saferith.Modulus
-	// S = r² mod N
-	S *saferith.Nat
-	// T = Sˡ mod N
-	T *saferith.Nat
-	// Decommitment = uᵢ decommitment bytes
-	Decommitment hash.Decommitment
-}
+var (
+	ErrVSSPolynomialHasIncorrectConstant = errors.New("vss polynomial has incorrect constant")
+	ErrVSSPolynomialHasIncorrectDegree   = errors.New("vss polynomial has incorrect degree")
+)
 
 // StoreBroadcastMessage implements round.BroadcastRound.
 //
@@ -61,61 +45,74 @@ type broadcast3 struct {
 // - validate commitments.
 // - store ridⱼ, Cⱼ, Nⱼ, Sⱼ, Tⱼ, Fⱼ(X), Aⱼ.
 func (r *round3) StoreBroadcastMessage(msg round.Message) error {
-	from := msg.From
-	body, ok := msg.Content.(*broadcast3)
+	body, ok := msg.Content.(*Broadcast3)
 	if !ok || body == nil {
 		return round.ErrInvalidContent
 	}
 
 	// check nil
-	if body.N == nil || body.S == nil || body.T == nil || body.VSSPolynomial == nil || body.SchnorrCommitments == nil {
+	if !body.ValidateBasic() {
 		return round.ErrNilFields
 	}
-	// check RID length
-	if err := body.RID.Validate(); err != nil {
+
+	// check RID lengths
+	RID := types.RID(body.RID)
+	if err := RID.Validate(); err != nil {
 		return fmt.Errorf("rid: %w", err)
 	}
-	if err := body.C.Validate(); err != nil {
+
+	chainKey := types.RID(body.C)
+	if err := chainKey.Validate(); err != nil {
 		return fmt.Errorf("chainkey: %w", err)
 	}
+
 	// check decommitment
-	if err := body.Decommitment.Validate(); err != nil {
-		return err
+	decommitment := hash.Decommitment(body.Decommitment)
+	if err := decommitment.Validate(); err != nil {
+		return fmt.Errorf("decommitment: %w", err)
 	}
 
-	// Save all X, VSSCommitments
-	VSSPolynomial := body.VSSPolynomial
-	// check that the constant coefficient is 0
-	// if refresh then the polynomial is constant
-	if !(r.VSSSecret.Constant().IsZero() == VSSPolynomial.IsConstant) {
-		return errors.New("vss polynomial has incorrect constant")
-	}
-	// check deg(Fⱼ) = t
-	if VSSPolynomial.Degree() != r.Threshold() {
-		return errors.New("vss polynomial has incorrect degree")
+	VSSPolynomial, err := body.unmarshalVssExpoly(r.Group(), r.Threshold(), r.VSSSecret.Constant().IsZero())
+	if err != nil {
+		return fmt.Errorf("vss polynomial: %w", err)
 	}
 
 	// Set Paillier
-	if err := paillier.ValidateN(body.N); err != nil {
-		return err
+	N, S, T, err := body.unmarshalPaillierAndPedersen()
+	if err != nil {
+		return fmt.Errorf("saferith: %w", err)
 	}
 
 	// Verify Pedersen
-	if err := pedersen.ValidateParameters(body.N, body.S, body.T); err != nil {
+	if err := pedersen.ValidateParameters(N, S, T); err != nil {
 		return err
 	}
+
+	schnorrCommitment, err := zksch.UnmarshalCommitment(body.SchnorrCommitments, r.Group())
+	if err != nil {
+		return fmt.Errorf("schnorr commitment: %w", err)
+	}
+
+	elgamalPublic, err := r.Group().UnmarshalPoint(body.ElGamalPublic)
+	if err != nil {
+		return fmt.Errorf("elgamal public key: %w", err)
+	}
+
+	from := msg.From
+
 	// Verify decommit
 	if !r.HashForID(from).Decommit(r.Commitments[from], body.Decommitment,
-		body.RID, body.C, VSSPolynomial, body.SchnorrCommitments, body.ElGamalPublic, body.N, body.S, body.T) {
+		RID, chainKey, VSSPolynomial, schnorrCommitment, elgamalPublic, N, S, T) {
 		return errors.New("failed to decommit")
 	}
-	r.RIDs[from] = body.RID
-	r.ChainKeys[from] = body.C
-	r.PaillierPublic[from] = paillier.NewPublicKey(body.N)
-	r.Pedersen[from] = pedersen.New(arith.ModulusFromN(body.N), body.S, body.T)
-	r.VSSPolynomials[from] = body.VSSPolynomial
-	r.SchnorrCommitments[from] = body.SchnorrCommitments
-	r.ElGamalPublic[from] = body.ElGamalPublic
+
+	r.RIDs[from] = RID
+	r.ChainKeys[from] = chainKey
+	r.PaillierPublic[from] = paillier.NewPublicKey(N)
+	r.Pedersen[from] = pedersen.New(arith.ModulusFromN(N), S, T)
+	r.VSSPolynomials[from] = VSSPolynomial
+	r.SchnorrCommitments[from] = schnorrCommitment
+	r.ElGamalPublic[from] = elgamalPublic
 
 	return nil
 }
@@ -126,6 +123,62 @@ func (round3) VerifyMessage(round.Message) error { return nil }
 // StoreMessage implements round.Round.
 func (round3) StoreMessage(round.Message) error { return nil }
 
+func (r *round3) CanFinalize() bool {
+	t := r.Threshold() + 1
+
+	// quick check.
+	if len(r.RIDs) < t ||
+		len(r.ChainKeys) < t ||
+		len(r.PaillierPublic) < t ||
+		len(r.Pedersen) < t ||
+		len(r.VSSPolynomials) < t ||
+		len(r.SchnorrCommitments) < t ||
+		len(r.ElGamalPublic) < t {
+		return false
+	}
+
+	// check we received from all participants:
+	for _, pid := range r.OtherPartyIDs() {
+		if !r.receivedFromPartID(pid) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (r *round3) receivedFromPartID(l party.ID) bool {
+	if _, ok := r.RIDs[l]; !ok {
+		return false
+	}
+
+	if _, ok := r.ChainKeys[l]; !ok {
+		return false
+	}
+
+	if _, ok := r.PaillierPublic[l]; !ok {
+		return false
+	}
+
+	if _, ok := r.Pedersen[l]; !ok {
+		return false
+	}
+
+	if _, ok := r.VSSPolynomials[l]; !ok {
+		return false
+	}
+
+	if _, ok := r.SchnorrCommitments[l]; !ok {
+		return false
+	}
+
+	if _, ok := r.ElGamalPublic[l]; !ok {
+		return false
+	}
+
+	return true
+}
+
 // Finalize implements round.Round
 //
 // - set rid = ⊕ⱼ ridⱼ and update hash state
@@ -135,7 +188,7 @@ func (round3) StoreMessage(round.Message) error { return nil }
 //   - if refresh skip constant coefficient
 //
 // - send proofs and encryption of share for Pⱼ.
-func (r *round3) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round3) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	// c = ⊕ⱼ cⱼ
 	chainKey := r.PreviousChainKey
 	if chainKey == nil {
@@ -169,10 +222,12 @@ func (r *round3) Finalize(out chan<- *round.Message) (round.Session, error) {
 		Q:      r.PaillierSecret.Q(),
 	}, h.Clone(), zkprm.Public{Aux: r.Pedersen[r.SelfID()]}, r.Pool)
 
-	if err := r.BroadcastMessage(out, &broadcast4{
-		Mod: mod,
-		Prm: prm,
-	}); err != nil {
+	broadcastMsg, err := makeBroadcast4(mod, prm)
+	if err != nil {
+		return r, err
+	}
+
+	if err := r.BroadcastMessage(out, broadcastMsg); err != nil {
 		return r, err
 	}
 
@@ -188,13 +243,14 @@ func (r *round3) Finalize(out chan<- *round.Message) (round.Session, error) {
 		// compute fᵢ(j)
 		share := r.VSSSecret.Evaluate(j.Scalar(r.Group()))
 		// Encrypt share
-		C, _ := r.PaillierPublic[j].Enc(curve.MakeInt(share))
+		shareCtx, _ := r.PaillierPublic[j].Enc(curve.MakeInt(share))
 
-		err := r.SendMessage(out, &message4{
-			Share: C,
-			Fac:   fac,
-		}, j)
+		msg, err := makeMessage4(shareCtx, fac)
 		if err != nil {
+			return r, err
+		}
+
+		if err := r.SendMessage(out, msg, j); err != nil {
 			return r, err
 		}
 	}
@@ -202,24 +258,29 @@ func (r *round3) Finalize(out chan<- *round.Message) (round.Session, error) {
 	// Write rid to the hash state
 	r.UpdateHashState(rid)
 	return &round4{
-		round3:   r,
-		RID:      rid,
-		ChainKey: chainKey,
+		round3:    r,
+		RID:       rid,
+		ChainKey:  chainKey,
+		validMod:  map[party.ID]bool{r.SelfID(): true},
+		validPrms: map[party.ID]bool{r.SelfID(): true},
 	}, nil
 }
 
 // MessageContent implements round.Round.
 func (round3) MessageContent() round.Content { return nil }
 
-// RoundNumber implements round.Content.
-func (broadcast3) RoundNumber() round.Number { return 3 }
-
 // BroadcastContent implements round.BroadcastRound.
 func (r *round3) BroadcastContent() round.BroadcastContent {
-	return &broadcast3{
-		VSSPolynomial:      polynomial.EmptyExponent(r.Group()),
-		SchnorrCommitments: zksch.EmptyCommitment(r.Group()),
-		ElGamalPublic:      r.Group().NewPoint(),
+	return &Broadcast3{
+		RID:                []byte{},
+		C:                  []byte{},
+		VSSPolynomial:      []byte{},
+		SchnorrCommitments: []byte{},
+		ElGamalPublic:      []byte{},
+		N:                  []byte{},
+		S:                  []byte{},
+		T:                  []byte{},
+		Decommitment:       []byte{},
 	}
 }
 

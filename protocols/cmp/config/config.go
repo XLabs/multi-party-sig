@@ -135,11 +135,15 @@ func (p *Public) WriteTo(w io.Writer) (total int64, err error) {
 	if p == nil {
 		return 0, io.ErrUnexpectedEOF
 	}
+
+	crv := p.ECDSA.Curve()
+
 	// write ECDSA
-	data, err := p.ECDSA.MarshalBinary()
+	data, err := crv.MarshalPoint(p.ECDSA)
 	if err != nil {
 		return
 	}
+
 	n, err := w.Write(data)
 	total = int64(n)
 	if err != nil {
@@ -147,10 +151,11 @@ func (p *Public) WriteTo(w io.Writer) (total int64, err error) {
 	}
 
 	// write ElGamal
-	data, err = p.ElGamal.MarshalBinary()
+	data, err = crv.MarshalPoint(p.ElGamal)
 	if err != nil {
 		return
 	}
+
 	n, err = w.Write(data)
 	total += int64(n)
 	if err != nil {
@@ -204,9 +209,11 @@ func ValidThreshold(t, n int) bool {
 	if t < 0 || t > math.MaxUint32 {
 		return false
 	}
+
 	if n <= 0 || t > n-1 {
 		return false
 	}
+
 	return true
 }
 

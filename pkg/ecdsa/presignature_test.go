@@ -13,7 +13,7 @@ import (
 
 func generateShares(secret curve.Scalar, ids []party.ID) map[party.ID]curve.Scalar {
 	group := secret.Curve()
-	buf, _ := secret.MarshalBinary()
+	buf, _ := group.MarshalScalar(secret)
 	seed := int64(binary.BigEndian.Uint64(buf))
 	rand := mrand.New(mrand.NewSource(seed))
 	sum := group.NewScalar()
