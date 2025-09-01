@@ -13,3 +13,29 @@ message Broadcast2{
 message Message2{
 	bytes ProofEnc =1; // *zkenc.Proof
 }
+
+message Broadcast3 {
+	// BigGammaShare = Γⱼ; a curve.Point 
+	bytes BigGammaShare = 1;
+}
+
+message Message3{
+	// DeltaBeta   *paillier.Ciphertext // DeltaBeta = βᵢⱼ
+	bytes DeltaBeta = 1;
+	// ChiBeta     *paillier.Ciphertext // ChiBeta = β̂ᵢⱼ
+	bytes ChiBeta = 2;
+	// DeltaD      *paillier.Ciphertext // DeltaD = Dᵢⱼ
+	bytes DeltaD = 3;
+	// DeltaF     *paillier.Ciphertext // DeltaF = Fᵢⱼ
+	bytes DeltaF = 4;
+	// DeltaProof *zkaffg.Proof
+	bytes DeltaProof = 5;
+	// ChiD       *paillier.Ciphertext // DeltaD = D̂_{ij}
+	bytes ChiD = 6;
+	// ChiF       *paillier.Ciphertext // ChiF = F̂ᵢⱼ
+	bytes ChiF = 7;
+	// ChiProof   *zkaffg.Proof
+	bytes ChiProof = 8;
+	// ProofLog   *zklogstar.Proof
+	bytes ProofLog = 9;
+}

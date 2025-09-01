@@ -7,12 +7,11 @@
 package sign
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -120,6 +119,168 @@ func (x *Message2) GetProofEnc() []byte {
 	return nil
 }
 
+type Broadcast3 struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// BigGammaShare = Γⱼ; a curve.Point
+	BigGammaShare []byte `protobuf:"bytes,1,opt,name=BigGammaShare,proto3" json:"BigGammaShare,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Broadcast3) Reset() {
+	*x = Broadcast3{}
+	mi := &file_proto_cmp_signing_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Broadcast3) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Broadcast3) ProtoMessage() {}
+
+func (x *Broadcast3) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_cmp_signing_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Broadcast3.ProtoReflect.Descriptor instead.
+func (*Broadcast3) Descriptor() ([]byte, []int) {
+	return file_proto_cmp_signing_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Broadcast3) GetBigGammaShare() []byte {
+	if x != nil {
+		return x.BigGammaShare
+	}
+	return nil
+}
+
+type Message3 struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// DeltaBeta   *paillier.Ciphertext // DeltaBeta = βᵢⱼ
+	DeltaBeta []byte `protobuf:"bytes,1,opt,name=DeltaBeta,proto3" json:"DeltaBeta,omitempty"`
+	// ChiBeta     *paillier.Ciphertext // ChiBeta = β̂ᵢⱼ
+	ChiBeta []byte `protobuf:"bytes,2,opt,name=ChiBeta,proto3" json:"ChiBeta,omitempty"`
+	// DeltaD      *paillier.Ciphertext // DeltaD = Dᵢⱼ
+	DeltaD []byte `protobuf:"bytes,3,opt,name=DeltaD,proto3" json:"DeltaD,omitempty"`
+	// DeltaF     *paillier.Ciphertext // DeltaF = Fᵢⱼ
+	DeltaF []byte `protobuf:"bytes,4,opt,name=DeltaF,proto3" json:"DeltaF,omitempty"`
+	// DeltaProof *zkaffg.Proof
+	DeltaProof []byte `protobuf:"bytes,5,opt,name=DeltaProof,proto3" json:"DeltaProof,omitempty"`
+	// ChiD       *paillier.Ciphertext // DeltaD = D̂_{ij}
+	ChiD []byte `protobuf:"bytes,6,opt,name=ChiD,proto3" json:"ChiD,omitempty"`
+	// ChiF       *paillier.Ciphertext // ChiF = F̂ᵢⱼ
+	ChiF []byte `protobuf:"bytes,7,opt,name=ChiF,proto3" json:"ChiF,omitempty"`
+	// ChiProof   *zkaffg.Proof
+	ChiProof []byte `protobuf:"bytes,8,opt,name=ChiProof,proto3" json:"ChiProof,omitempty"`
+	// ProofLog   *zklogstar.Proof
+	ProofLog      []byte `protobuf:"bytes,9,opt,name=ProofLog,proto3" json:"ProofLog,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Message3) Reset() {
+	*x = Message3{}
+	mi := &file_proto_cmp_signing_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Message3) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Message3) ProtoMessage() {}
+
+func (x *Message3) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_cmp_signing_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Message3.ProtoReflect.Descriptor instead.
+func (*Message3) Descriptor() ([]byte, []int) {
+	return file_proto_cmp_signing_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Message3) GetDeltaBeta() []byte {
+	if x != nil {
+		return x.DeltaBeta
+	}
+	return nil
+}
+
+func (x *Message3) GetChiBeta() []byte {
+	if x != nil {
+		return x.ChiBeta
+	}
+	return nil
+}
+
+func (x *Message3) GetDeltaD() []byte {
+	if x != nil {
+		return x.DeltaD
+	}
+	return nil
+}
+
+func (x *Message3) GetDeltaF() []byte {
+	if x != nil {
+		return x.DeltaF
+	}
+	return nil
+}
+
+func (x *Message3) GetDeltaProof() []byte {
+	if x != nil {
+		return x.DeltaProof
+	}
+	return nil
+}
+
+func (x *Message3) GetChiD() []byte {
+	if x != nil {
+		return x.ChiD
+	}
+	return nil
+}
+
+func (x *Message3) GetChiF() []byte {
+	if x != nil {
+		return x.ChiF
+	}
+	return nil
+}
+
+func (x *Message3) GetChiProof() []byte {
+	if x != nil {
+		return x.ChiProof
+	}
+	return nil
+}
+
+func (x *Message3) GetProofLog() []byte {
+	if x != nil {
+		return x.ProofLog
+	}
+	return nil
+}
+
 var File_proto_cmp_signing_proto protoreflect.FileDescriptor
 
 const file_proto_cmp_signing_proto_rawDesc = "" +
@@ -130,7 +291,22 @@ const file_proto_cmp_signing_proto_rawDesc = "" +
 	"\x01K\x18\x01 \x01(\fR\x01K\x12\f\n" +
 	"\x01G\x18\x02 \x01(\fR\x01G\"&\n" +
 	"\bMessage2\x12\x1a\n" +
-	"\bProofEnc\x18\x01 \x01(\fR\bProofEncB\x14Z\x12protocols/cmp/signb\x06proto3"
+	"\bProofEnc\x18\x01 \x01(\fR\bProofEnc\"2\n" +
+	"\n" +
+	"Broadcast3\x12$\n" +
+	"\rBigGammaShare\x18\x01 \x01(\fR\rBigGammaShare\"\xf2\x01\n" +
+	"\bMessage3\x12\x1c\n" +
+	"\tDeltaBeta\x18\x01 \x01(\fR\tDeltaBeta\x12\x18\n" +
+	"\aChiBeta\x18\x02 \x01(\fR\aChiBeta\x12\x16\n" +
+	"\x06DeltaD\x18\x03 \x01(\fR\x06DeltaD\x12\x16\n" +
+	"\x06DeltaF\x18\x04 \x01(\fR\x06DeltaF\x12\x1e\n" +
+	"\n" +
+	"DeltaProof\x18\x05 \x01(\fR\n" +
+	"DeltaProof\x12\x12\n" +
+	"\x04ChiD\x18\x06 \x01(\fR\x04ChiD\x12\x12\n" +
+	"\x04ChiF\x18\a \x01(\fR\x04ChiF\x12\x1a\n" +
+	"\bChiProof\x18\b \x01(\fR\bChiProof\x12\x1a\n" +
+	"\bProofLog\x18\t \x01(\fR\bProofLogB\x14Z\x12protocols/cmp/signb\x06proto3"
 
 var (
 	file_proto_cmp_signing_proto_rawDescOnce sync.Once
@@ -144,10 +320,12 @@ func file_proto_cmp_signing_proto_rawDescGZIP() []byte {
 	return file_proto_cmp_signing_proto_rawDescData
 }
 
-var file_proto_cmp_signing_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_cmp_signing_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_proto_cmp_signing_proto_goTypes = []any{
 	(*Broadcast2)(nil), // 0: xlabs.cmp.sign.Broadcast2
 	(*Message2)(nil),   // 1: xlabs.cmp.sign.Message2
+	(*Broadcast3)(nil), // 2: xlabs.cmp.sign.Broadcast3
+	(*Message3)(nil),   // 3: xlabs.cmp.sign.Message3
 }
 var file_proto_cmp_signing_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -168,7 +346,7 @@ func file_proto_cmp_signing_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_cmp_signing_proto_rawDesc), len(file_proto_cmp_signing_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

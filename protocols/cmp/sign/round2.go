@@ -129,9 +129,12 @@ func (r *round2) CanFinalize() bool {
 //
 // - compute Hash(ssid, K₁, G₁, …, Kₙ, Gₙ).
 func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
-	if err := r.BroadcastMessage(out, &broadcast3{
-		BigGammaShare: r.BigGammaShare[r.SelfID()],
-	}); err != nil {
+	msg, err := makeBroadcast3(r.BigGammaShare[r.SelfID()])
+	if err != nil {
+		return r, err
+	}
+
+	if err := r.BroadcastMessage(out, msg); err != nil {
 		return r, err
 	}
 
@@ -162,15 +165,20 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 				Rho: r.GNonce,
 			})
 
-		err := r.SendMessage(out, &message3{
-			DeltaD:     DeltaD,
-			DeltaF:     DeltaF,
-			DeltaProof: DeltaProof,
-			ChiD:       ChiD,
-			ChiF:       ChiF,
-			ChiProof:   ChiProof,
-			ProofLog:   proof,
-		}, j)
+		msg, err := makeMessage3(
+			DeltaD,
+			DeltaF,
+			DeltaProof,
+			ChiD,
+			ChiF,
+			ChiProof,
+			proof,
+		)
+		if err != nil {
+			return err
+		}
+
+		err = r.SendMessage(out, msg, j)
 		return mtaOut{
 			err:       err,
 			DeltaBeta: DeltaBeta,

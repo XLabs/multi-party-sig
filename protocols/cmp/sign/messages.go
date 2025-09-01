@@ -3,10 +3,15 @@ package sign
 import (
 	"errors"
 
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/paillier"
+	zkaffg "github.com/xlabs/multi-party-sig/pkg/zk/affg"
 	zkenc "github.com/xlabs/multi-party-sig/pkg/zk/enc"
+	zklogstar "github.com/xlabs/multi-party-sig/pkg/zk/logstar"
 	common "github.com/xlabs/tss-common"
 )
+
+// -- round 2 --
 
 func makeBroadcast2(k, g *paillier.Ciphertext) (*Broadcast2, error) {
 	if k == nil || g == nil {
@@ -98,4 +103,110 @@ func (x *Message2) UnmarshalContent() (*zkenc.Proof, error) {
 	}
 
 	return proof, nil
+}
+
+// -- round 3 ---
+func makeBroadcast3(bigGammaShare curve.Point) (*Broadcast3, error) {
+	if bigGammaShare == nil {
+		return nil, errors.New("invalid big gamma share")
+	}
+	bts, err := bigGammaShare.Curve().MarshalPoint(bigGammaShare)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Broadcast3{
+		BigGammaShare: bts,
+	}, nil
+}
+
+func (x *Broadcast3) ValidateBasic() bool {
+	return x != nil && x.BigGammaShare != nil
+}
+
+func (x *Broadcast3) GetProtocol() common.ProtocolType {
+	return common.ProtocolECDSA
+}
+
+func (x *Broadcast3) RoundNumber() int {
+	return 3
+}
+
+func (x *Broadcast3) Reliable() bool {
+	return true
+}
+
+func (x *Broadcast3) UnmarshalContent(crv curve.Curve) (curve.Point, error) {
+	pt, err := crv.UnmarshalPoint(x.BigGammaShare)
+	if err != nil {
+		return nil, err
+	}
+
+	return pt, nil
+}
+
+func makeMessage3(
+	DeltaD *paillier.Ciphertext, // DeltaD = Dᵢⱼ
+	DeltaF *paillier.Ciphertext, // DeltaF = Fᵢⱼ
+	DeltaProof *zkaffg.Proof,
+	ChiD *paillier.Ciphertext, // DeltaD = D̂_{ij}
+	ChiF *paillier.Ciphertext, // ChiF = F̂ᵢⱼ
+	ChiProof *zkaffg.Proof,
+	ProofLog *zklogstar.Proof) (*Message3, error) {
+
+	deltaDBytes, err := DeltaD.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	deltaFBytes, err := DeltaF.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	deltaProofBytes, err := DeltaProof.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	chiDBytes, err := ChiD.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	chiFBytes, err := ChiF.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	chiProofBytes, err := ChiProof.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	proofLogBytes, err := ProofLog.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Message3{
+		DeltaD:     deltaDBytes,
+		DeltaF:     deltaFBytes,
+		DeltaProof: deltaProofBytes,
+		ChiD:       chiDBytes,
+		ChiF:       chiFBytes,
+		ChiProof:   chiProofBytes,
+		ProofLog:   proofLogBytes,
+	}, nil
+}
+
+func (x *Message3) GetProtocol() common.ProtocolType {
+	return common.ProtocolECDSA
+}
+
+func (x *Message3) ValidateBasic() bool {
+	return x != nil && len(x.DeltaD) > 0 && len(x.DeltaF) > 0 && len(x.DeltaProof) > 0 &&
+		len(x.ChiD) > 0 && len(x.ChiF) > 0 && len(x.ChiProof) > 0 && len(x.ProofLog) > 0
+}
+
+func (x *Message3) Reliable() bool {
+	return false
+}
+
+func (x *Message3) RoundNumber() int {
+	return 3
 }
