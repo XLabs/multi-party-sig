@@ -2,6 +2,7 @@ package sign
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/internal/mta"
@@ -11,6 +12,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	zkenc "github.com/xlabs/multi-party-sig/pkg/zk/enc"
 	zklogstar "github.com/xlabs/multi-party-sig/pkg/zk/logstar"
+	common "github.com/xlabs/tss-common"
 )
 
 var _ round.Round = (*round2)(nil)
@@ -22,6 +24,8 @@ type round2 struct {
 	K map[party.ID]*paillier.Ciphertext
 	// G[j] = Gⱼ = encⱼ(γⱼ)
 	G map[party.ID]*paillier.Ciphertext
+	// used to signal we can finalize safely the round
+	verifiedMessage2 map[party.ID]struct{}
 
 	// BigGammaShare[j] = Γⱼ = [γⱼ]•G
 	BigGammaShare map[party.ID]curve.Point
@@ -39,34 +43,26 @@ type round2 struct {
 	GNonce *saferith.Nat
 }
 
-type broadcast2 struct {
-	round.ReliableBroadcastContent
-	// K = Kᵢ
-	K *paillier.Ciphertext
-	// G = Gᵢ
-	G *paillier.Ciphertext
-}
-
-type message2 struct {
-	ProofEnc *zkenc.Proof
-}
-
 // StoreBroadcastMessage implements round.Round.
 //
 // - store Kⱼ, Gⱼ.
 func (r *round2) StoreBroadcastMessage(msg round.Message) error {
 	from := msg.From
-	body, ok := msg.Content.(*broadcast2)
-	if !ok || body == nil {
+	body, ok := msg.Content.(*Broadcast2)
+	if !ok || !body.ValidateBasic() {
 		return round.ErrInvalidContent
 	}
+	K, G, err := body.UnmarshalContent()
+	if err != nil {
+		return fmt.Errorf("round2: failed to unmarshal ciphertexts: %w", err)
+	}
 
-	if !r.Paillier[from].ValidateCiphertexts(body.K, body.G) {
+	if !r.Paillier[from].ValidateCiphertexts(K, G) {
 		return errors.New("invalid K, G")
 	}
 
-	r.K[from] = body.K
-	r.G[from] = body.G
+	r.K[from] = K
+	r.G[from] = G
 
 	return nil
 }
@@ -74,24 +70,30 @@ func (r *round2) StoreBroadcastMessage(msg round.Message) error {
 // VerifyMessage implements round.Round.
 //
 // - verify zkenc(Kⱼ).
+// TODO: consider merging verifyMessage into storeMessage.
 func (r *round2) VerifyMessage(msg round.Message) error {
 	from, to := msg.From, msg.To
-	body, ok := msg.Content.(*message2)
-	if !ok || body == nil {
+	body, ok := msg.Content.(*Message2)
+	if !ok || !body.ValidateBasic() {
 		return round.ErrInvalidContent
 	}
 
-	if body.ProofEnc == nil {
-		return round.ErrNilFields
+	proofEnc, err := body.UnmarshalContent()
+	if err != nil {
+		return fmt.Errorf("round2: failed to unmarshal proof: %w", err)
 	}
 
-	if !body.ProofEnc.Verify(r.Group(), r.HashForID(from), zkenc.Public{
+	// TODO: this assumes we've received Broadcast2 before we reach this point.
+	// (r.K[from] is nil and will FAIL to verify this proof). Consider how to handle this when Broadcast2 is not yet received.
+	if !proofEnc.Verify(r.Group(), r.HashForID(from), zkenc.Public{
 		K:      r.K[from],
 		Prover: r.Paillier[from],
 		Aux:    r.Pedersen[to],
 	}) {
 		return errors.New("failed to validate enc proof for K")
 	}
+
+	r.verifiedMessage2[from] = struct{}{}
 	return nil
 }
 
@@ -100,10 +102,33 @@ func (r *round2) VerifyMessage(msg round.Message) error {
 // - store Kⱼ, Gⱼ.
 func (round2) StoreMessage(round.Message) error { return nil }
 
+func (r *round2) CanFinalize() bool {
+	t := r.Threshold() + 1
+
+	if len(r.verifiedMessage2) < t {
+		return false
+	}
+
+	for _, pid := range r.OtherPartyIDs() {
+		if _, ok := r.verifiedMessage2[pid]; !ok {
+			return false
+		}
+
+		if _, ok := r.K[pid]; !ok {
+			return false
+		}
+
+		if _, ok := r.G[pid]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 // Finalize implements round.Round
 //
 // - compute Hash(ssid, K₁, G₁, …, Kₙ, Gₙ).
-func (r *round2) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	if err := r.BroadcastMessage(out, &broadcast3{
 		BigGammaShare: r.BigGammaShare[r.SelfID()],
 	}); err != nil {
@@ -173,17 +198,8 @@ func (r *round2) Finalize(out chan<- *round.Message) (round.Session, error) {
 	}, nil
 }
 
-// RoundNumber implements round.Content.
-func (message2) RoundNumber() round.Number { return 2 }
-
-// MessageContent implements round.Round.
-func (round2) MessageContent() round.Content { return &message2{} }
-
-// RoundNumber implements round.Content.
-func (broadcast2) RoundNumber() round.Number { return 2 }
-
 // BroadcastContent implements round.BroadcastRound.
-func (round2) BroadcastContent() round.BroadcastContent { return &broadcast2{} }
+func (round2) BroadcastContent() round.BroadcastContent { return &Broadcast2{} }
 
 // Number implements round.Round.
 func (round2) Number() round.Number { return 2 }

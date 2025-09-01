@@ -4,6 +4,12 @@ option go_package = "protocols/cmp/sign";
 
 
 message Broadcast2{
-    
+	// K = Kᵢ
+    bytes K = 1;
+	// G = Gᵢ
+    bytes G = 2;
 }
 
+message Message2{
+	bytes ProofEnc =1; // *zkenc.Proof
+}

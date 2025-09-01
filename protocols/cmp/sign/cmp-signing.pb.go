@@ -7,11 +7,12 @@
 package sign
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -22,7 +23,11 @@ const (
 )
 
 type Broadcast2 struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// K = Kᵢ
+	K []byte `protobuf:"bytes,1,opt,name=K,proto3" json:"K,omitempty"`
+	// G = Gᵢ
+	G             []byte `protobuf:"bytes,2,opt,name=G,proto3" json:"G,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -57,13 +62,75 @@ func (*Broadcast2) Descriptor() ([]byte, []int) {
 	return file_proto_cmp_signing_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *Broadcast2) GetK() []byte {
+	if x != nil {
+		return x.K
+	}
+	return nil
+}
+
+func (x *Broadcast2) GetG() []byte {
+	if x != nil {
+		return x.G
+	}
+	return nil
+}
+
+type Message2 struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProofEnc      []byte                 `protobuf:"bytes,1,opt,name=ProofEnc,proto3" json:"ProofEnc,omitempty"` // *zkenc.Proof
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Message2) Reset() {
+	*x = Message2{}
+	mi := &file_proto_cmp_signing_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Message2) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Message2) ProtoMessage() {}
+
+func (x *Message2) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_cmp_signing_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Message2.ProtoReflect.Descriptor instead.
+func (*Message2) Descriptor() ([]byte, []int) {
+	return file_proto_cmp_signing_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Message2) GetProofEnc() []byte {
+	if x != nil {
+		return x.ProofEnc
+	}
+	return nil
+}
+
 var File_proto_cmp_signing_proto protoreflect.FileDescriptor
 
 const file_proto_cmp_signing_proto_rawDesc = "" +
 	"\n" +
-	"\x17proto/cmp-signing.proto\x12\x0exlabs.cmp.sign\"\f\n" +
+	"\x17proto/cmp-signing.proto\x12\x0exlabs.cmp.sign\"(\n" +
 	"\n" +
-	"Broadcast2B\x14Z\x12protocols/cmp/signb\x06proto3"
+	"Broadcast2\x12\f\n" +
+	"\x01K\x18\x01 \x01(\fR\x01K\x12\f\n" +
+	"\x01G\x18\x02 \x01(\fR\x01G\"&\n" +
+	"\bMessage2\x12\x1a\n" +
+	"\bProofEnc\x18\x01 \x01(\fR\bProofEncB\x14Z\x12protocols/cmp/signb\x06proto3"
 
 var (
 	file_proto_cmp_signing_proto_rawDescOnce sync.Once
@@ -77,9 +144,10 @@ func file_proto_cmp_signing_proto_rawDescGZIP() []byte {
 	return file_proto_cmp_signing_proto_rawDescData
 }
 
-var file_proto_cmp_signing_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_proto_cmp_signing_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_proto_cmp_signing_proto_goTypes = []any{
 	(*Broadcast2)(nil), // 0: xlabs.cmp.sign.Broadcast2
+	(*Message2)(nil),   // 1: xlabs.cmp.sign.Message2
 }
 var file_proto_cmp_signing_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -100,7 +168,7 @@ func file_proto_cmp_signing_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_cmp_signing_proto_rawDesc), len(file_proto_cmp_signing_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

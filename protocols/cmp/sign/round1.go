@@ -10,6 +10,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	zkenc "github.com/xlabs/multi-party-sig/pkg/zk/enc"
+	common "github.com/xlabs/tss-common"
 )
 
 var _ round.Round = (*round1)(nil)
@@ -26,6 +27,10 @@ type round1 struct {
 	ECDSA          map[party.ID]curve.Point
 
 	Message []byte
+}
+
+func (r *round1) CanFinalize() bool {
+	return true // first round doesn't wait for any messages.
 }
 
 // VerifyMessage implements round.Round.
@@ -48,7 +53,7 @@ func (round1) StoreMessage(round.Message) error { return nil }
 //
 // In the next round, we send a hash of all the {Kⱼ,Gⱼ}ⱼ.
 // In two rounds, we compare the hashes received and if they are different then we abort.
-func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	// γᵢ <- 𝔽,
 	// Γᵢ = [γᵢ]⋅G
 	GammaShare, BigGammaShare := sample.ScalarPointPair(rand.Reader, r.Group())
@@ -61,8 +66,11 @@ func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
 	K, KNonce := r.Paillier[r.SelfID()].Enc(curve.MakeInt(KShare))
 
 	otherIDs := r.OtherPartyIDs()
-	broadcastMsg := broadcast2{K: K, G: G}
-	if err := r.BroadcastMessage(out, &broadcastMsg); err != nil {
+	broadcastMsg, err := makeBroadcast2(K, G)
+	if err != nil {
+		return r, err
+	}
+	if err := r.BroadcastMessage(out, broadcastMsg); err != nil {
 		return r, err
 	}
 	errors := r.Pool.Parallelize(len(otherIDs), func(i int) interface{} {
@@ -76,10 +84,12 @@ func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
 			Rho: KNonce,
 		})
 
-		err := r.SendMessage(out, &message2{
-			ProofEnc: proof,
-		}, j)
+		msg, err := MakeMessage2(proof)
 		if err != nil {
+			return err
+		}
+
+		if err := r.SendMessage(out, msg, j); err != nil {
 			return err
 		}
 		return nil
@@ -91,14 +101,15 @@ func (r *round1) Finalize(out chan<- *round.Message) (round.Session, error) {
 	}
 
 	return &round2{
-		round1:        r,
-		K:             map[party.ID]*paillier.Ciphertext{r.SelfID(): K},
-		G:             map[party.ID]*paillier.Ciphertext{r.SelfID(): G},
-		BigGammaShare: map[party.ID]curve.Point{r.SelfID(): BigGammaShare},
-		GammaShare:    curve.MakeInt(GammaShare),
-		KShare:        KShare,
-		KNonce:        KNonce,
-		GNonce:        GNonce,
+		round1:           r,
+		K:                map[party.ID]*paillier.Ciphertext{r.SelfID(): K},
+		G:                map[party.ID]*paillier.Ciphertext{r.SelfID(): G},
+		verifiedMessage2: map[party.ID]struct{}{r.SelfID(): {}},
+		BigGammaShare:    map[party.ID]curve.Point{r.SelfID(): BigGammaShare},
+		GammaShare:       curve.MakeInt(GammaShare),
+		KShare:           KShare,
+		KNonce:           KNonce,
+		GNonce:           GNonce,
 	}, nil
 }
 
