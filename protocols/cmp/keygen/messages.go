@@ -342,5 +342,10 @@ func (x *Broadcast5) ValidateBasic() bool {
 }
 
 func (x *Broadcast5) UnmarshalContent(crv curve.Curve) (*zksch.Response, error) {
-	return zksch.UnmarshalResponse(x.SchnorrResponse, crv)
+	rsp := zksch.EmptyResponse(crv)
+	if err := rsp.UnmarshalBinary(x.SchnorrResponse); err != nil {
+		return nil, err
+	}
+
+	return rsp, nil
 }

@@ -18,7 +18,7 @@ var (
 
 // WriteItemsToBuffer writes uint16 sizes for each item, then marshal
 // each item and appends it to the buffer.
-func WriteItemsToBuffer(buf *bytes.Buffer, toMarshal []encoding.BinaryMarshaler) error {
+func WriteItemsToBuffer(buf *bytes.Buffer, toMarshal ...encoding.BinaryMarshaler) error {
 	items := make([][]byte, len(toMarshal))
 	totalLength := 0
 

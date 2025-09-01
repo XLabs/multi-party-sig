@@ -3,7 +3,6 @@ package zkenc
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding"
 	"errors"
 
 	"github.com/cronokirby/saferith"
@@ -155,8 +154,7 @@ func (c *Commitment) MarshalBinary() ([]byte, error) {
 
 	buf := bytes.NewBuffer(nil)
 
-	items := []encoding.BinaryMarshaler{c.S, c.A, c.C}
-	if err := marshal.WriteItemsToBuffer(buf, items); err != nil {
+	if err := marshal.WriteItemsToBuffer(buf, c.S, c.A, c.C); err != nil {
 		return nil, err
 	}
 
@@ -207,7 +205,7 @@ func (p *Proof) MarshalBinary() ([]byte, error) {
 
 	buf := bytes.NewBuffer(commitmentBytes)
 
-	if err := marshal.WriteItemsToBuffer(buf, []encoding.BinaryMarshaler{p.Z1, p.Z2, p.Z3}); err != nil {
+	if err := marshal.WriteItemsToBuffer(buf, p.Z1, p.Z2, p.Z3); err != nil {
 		return nil, err
 	}
 

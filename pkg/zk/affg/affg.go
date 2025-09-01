@@ -1,7 +1,9 @@
 package zkaffg
 
 import (
+	"bytes"
 	"crypto/rand"
+	"errors"
 
 	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
@@ -10,6 +12,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/paillier"
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
+	"github.com/xlabs/multi-party-sig/pkg/zk/marshal"
 )
 
 type Public struct {
@@ -257,4 +260,171 @@ func Empty(group curve.Curve) *Proof {
 		group:      group,
 		Commitment: &Commitment{Bx: group.NewPoint()},
 	}
+}
+
+var (
+	errInvalidCommitment = errors.New("invalid zkaffg commitment")
+	errInvalidProof      = errors.New("invalid zkaffg proof")
+	errNilCommitment     = errors.New("nil zkaffg commitment")
+	errNilProof          = errors.New("nil zkaffg proof")
+	errNilGroup          = errors.New("zkaffg proof has nil group")
+)
+
+func (c *Commitment) MarshalBinary() ([]byte, error) {
+	if c == nil || c.A == nil || c.Bx == nil || c.By == nil || c.E == nil || c.S == nil || c.F == nil || c.T == nil {
+		return nil, errInvalidCommitment
+	}
+
+	var buf bytes.Buffer
+	if err := marshal.WriteItemsToBuffer(&buf, c.A, c.By, c.E, c.S, c.F, c.T); err != nil {
+		return nil, err
+	}
+
+	bxBytes, err := c.Bx.Curve().MarshalPoint(c.Bx)
+	if err != nil {
+		return nil, err
+	}
+
+	buf.Write(bxBytes)
+
+	return buf.Bytes(), nil
+}
+
+func (c *Commitment) UnmarshalBinary(data []byte, grp curve.Curve) ([]byte, error) {
+	if c == nil {
+		return nil, errNilCommitment
+	}
+
+	sz, data, err := marshal.ReadUint16Sizes(6, data)
+	if err != nil {
+		return nil, err
+	}
+
+	c.A = new(paillier.Ciphertext)
+	if err := c.A.UnmarshalBinary(data[:sz[0]]); err != nil {
+		return nil, err
+	}
+	data = data[sz[0]:]
+
+	c.By = new(paillier.Ciphertext)
+	if err := c.By.UnmarshalBinary(data[:sz[1]]); err != nil {
+		return nil, err
+	}
+	data = data[sz[1]:]
+
+	c.E = new(saferith.Nat)
+	if err := c.E.UnmarshalBinary(data[:sz[2]]); err != nil {
+		return nil, err
+	}
+	data = data[sz[2]:]
+
+	c.S = new(saferith.Nat)
+	if err := c.S.UnmarshalBinary(data[:sz[3]]); err != nil {
+		return nil, err
+	}
+	data = data[sz[3]:]
+
+	c.F = new(saferith.Nat)
+	if err := c.F.UnmarshalBinary(data[:sz[4]]); err != nil {
+		return nil, err
+	}
+	data = data[sz[4]:]
+
+	c.T = new(saferith.Nat)
+	if err := c.T.UnmarshalBinary(data[:sz[5]]); err != nil {
+		return nil, err
+	}
+	data = data[sz[5]:]
+
+	ptSize := grp.PointBinarySize()
+	if len(data) < ptSize {
+		return nil, errInvalidCommitment
+	}
+
+	bx, err := grp.UnmarshalPoint(data[:ptSize])
+	if err != nil {
+		return nil, err
+	}
+
+	c.Bx = bx
+
+	return data[ptSize:], nil
+}
+
+func (p *Proof) MarshalBinary() ([]byte, error) {
+	if p == nil || p.Commitment == nil || p.Z1 == nil || p.Z2 == nil || p.Z3 == nil || p.Z4 == nil || p.W == nil || p.Wy == nil {
+		return nil, errInvalidProof
+	}
+
+	commitmentBytes, err := p.Commitment.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBuffer(commitmentBytes)
+
+	if err := marshal.WriteItemsToBuffer(buf, p.Z1, p.Z2, p.Z3, p.Z4, p.W, p.Wy); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (p *Proof) UnmarshalBinary(data []byte) error {
+	if p == nil {
+		return errNilProof
+	}
+
+	if p.group == nil {
+		return errNilGroup
+	}
+
+	p.Commitment = new(Commitment)
+	rest, err := p.Commitment.UnmarshalBinary(data, p.group)
+	if err != nil {
+		return err
+	}
+
+	sz, rest, err := marshal.ReadUint16Sizes(6, rest)
+	if err != nil {
+		return err
+	}
+
+	p.Z1 = new(saferith.Int)
+	if err := p.Z1.UnmarshalBinary(rest[:sz[0]]); err != nil {
+		return err
+	}
+	rest = rest[sz[0]:]
+
+	p.Z2 = new(saferith.Int)
+	if err := p.Z2.UnmarshalBinary(rest[:sz[1]]); err != nil {
+		return err
+	}
+	rest = rest[sz[1]:]
+
+	p.Z3 = new(saferith.Int)
+	if err := p.Z3.UnmarshalBinary(rest[:sz[2]]); err != nil {
+		return err
+	}
+	rest = rest[sz[2]:]
+
+	p.Z4 = new(saferith.Int)
+	if err := p.Z4.UnmarshalBinary(rest[:sz[3]]); err != nil {
+		return err
+	}
+	rest = rest[sz[3]:]
+
+	p.W = new(saferith.Nat)
+	if err := p.W.UnmarshalBinary(rest[:sz[4]]); err != nil {
+		return err
+	}
+	rest = rest[sz[4]:]
+
+	p.Wy = new(saferith.Nat)
+	if err := p.Wy.UnmarshalBinary(rest[:sz[5]]); err != nil {
+		return err
+	}
+	rest = rest[sz[5]:]
+
+	return nil
 }

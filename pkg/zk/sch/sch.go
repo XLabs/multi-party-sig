@@ -2,6 +2,7 @@ package zksch
 
 import (
 	"crypto/rand"
+	"errors"
 	"io"
 
 	"github.com/xlabs/multi-party-sig/pkg/hash"
@@ -141,13 +142,26 @@ func (r *Response) MarshalBinary() ([]byte, error) {
 	return r.Z.Curve().MarshalScalar(r.Z)
 }
 
-func UnmarshalResponse(data []byte, group curve.Curve) (*Response, error) {
-	scalar, err := group.UnmarshalScalar(data)
-	if err != nil {
-		return nil, err
+var (
+	errNilResponse = errors.New("nil zksch response")
+	errNilGroup    = errors.New("nil group")
+)
+
+func (r *Response) UnmarshalBinary(data []byte) error {
+	if r == nil {
+		return errNilResponse
+	}
+	if r.group == nil {
+		return errNilGroup
 	}
 
-	return &Response{group: group, Z: scalar}, nil
+	scalar, err := r.group.UnmarshalScalar(data)
+	if err != nil {
+		return err
+	}
+	r.Z = scalar
+
+	return nil
 }
 
 // Domain implements hash.WriterToWithDomain
