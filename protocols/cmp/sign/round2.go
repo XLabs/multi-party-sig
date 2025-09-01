@@ -198,11 +198,12 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	}
 
 	return &round3{
-		round2:          r,
-		DeltaShareBeta:  DeltaShareBetas,
-		ChiShareBeta:    ChiShareBetas,
-		DeltaShareAlpha: map[party.ID]*saferith.Int{},
-		ChiShareAlpha:   map[party.ID]*saferith.Int{},
+		round2:           r,
+		DeltaShareBeta:   DeltaShareBetas,
+		ChiShareBeta:     ChiShareBetas,
+		DeltaShareAlpha:  map[party.ID]*saferith.Int{},
+		ChiShareAlpha:    map[party.ID]*saferith.Int{},
+		verifiedMessage3: map[party.ID]struct{}{r.SelfID(): {}},
 	}, nil
 }
 

@@ -39,3 +39,15 @@ message Message3{
 	// ProofLog   *zklogstar.Proof
 	bytes ProofLog = 9;
 }
+
+
+message Message4 {
+	bytes ProofLog =1; // *zklogstar.Proof
+}
+
+message Broadcast4 {
+	// DeltaShare = δⱼ
+	bytes DeltaShare = 1; // curve.Scalar
+	// BigDeltaShare = Δⱼ = [kⱼ]•Γⱼ
+	bytes BigDeltaShare = 2; // curve.Point
+}

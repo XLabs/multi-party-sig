@@ -7,6 +7,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	zklogstar "github.com/xlabs/multi-party-sig/pkg/zk/logstar"
+	common "github.com/xlabs/tss-common"
 )
 
 var _ round.Round = (*round4)(nil)
@@ -83,13 +84,18 @@ func (round4) StoreMessage(round.Message) error {
 	return nil
 }
 
+func (r round4) CanFinalize() bool {
+	// TODO:
+	return len(r.DeltaShares) > 0 && len(r.BigDeltaShares) > 0
+}
+
 // Finalize implements round.Round
 //
 // - set δ = ∑ⱼ δⱼ
 // - set Δ = ∑ⱼ Δⱼ
 // - verify Δ = [δ]G
 // - compute σᵢ = rχᵢ + kᵢm.
-func (r *round4) Finalize(out chan<- *round.Message) (round.Session, error) {
+func (r *round4) Finalize(out chan<- common.ParsedMessage) (round.Session, error) {
 	// δ = ∑ⱼ δⱼ
 	// Δ = ∑ⱼ Δⱼ
 	Delta := r.Group().NewScalar()
