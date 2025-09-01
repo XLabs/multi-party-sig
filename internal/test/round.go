@@ -54,7 +54,8 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 				// Rounds should finish at this point, so we ensure that
 				// they utilise the CanFinalize method correctly.
 				if !r.CanFinalize() {
-					return errors.New("cannot finalize")
+					r.CanFinalize()
+					return fmt.Errorf("cannot finalize round %d", r.Number())
 				}
 
 				rNew, err = r.Finalize(outFake)
@@ -72,7 +73,8 @@ func Rounds(rounds []round.Session, rule Rule) (error, bool) {
 				}
 			} else {
 				if !r.CanFinalize() {
-					return errors.New("cannot finalize")
+					r.CanFinalize()
+					return fmt.Errorf("cannot finalize round %d", r.Number())
 				}
 				rNew, err = r.Finalize(out)
 			}

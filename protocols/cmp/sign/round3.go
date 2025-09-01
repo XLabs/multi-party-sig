@@ -30,11 +30,6 @@ type round3 struct {
 	verifiedMessage3 map[party.ID]struct{}
 }
 
-type broadcast3 struct {
-	round.NormalBroadcastContent
-	BigGammaShare curve.Point // BigGammaShare = Γⱼ
-}
-
 // StoreBroadcastMessage implements round.BroadcastRound.
 //
 // - store Γⱼ
@@ -106,6 +101,8 @@ func (r *round3) VerifyMessage(msg round.Message) error {
 		return errors.New("failed to validate log proof")
 	}
 
+	r.verifiedMessage3[from] = struct{}{}
+
 	return nil
 }
 
@@ -138,7 +135,11 @@ func (r *round3) StoreMessage(msg round.Message) error {
 
 func (r *round3) CanFinalize() bool {
 	t := r.Threshold() + 1
-	if len(r.BigGammaShare) < t || len(r.DeltaShareAlpha) < t || len(r.ChiShareAlpha) < t || len(r.verifiedMessage3) < t {
+	if len(r.BigGammaShare) < t || len(r.verifiedMessage3) < t {
+		return false
+	}
+	// we don't need DeltaShareBeta or ChiShareBeta from self (thus t-1).
+	if len(r.DeltaShareAlpha) < t-1 || len(r.ChiShareAlpha) < t-1 {
 		return false
 	}
 
@@ -233,11 +234,12 @@ func (r *round3) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	}
 
 	return &round4{
-		round3:         r,
-		DeltaShares:    map[party.ID]curve.Scalar{r.SelfID(): DeltaShareScalar},
-		BigDeltaShares: map[party.ID]curve.Point{r.SelfID(): BigDeltaShare},
-		Gamma:          Gamma,
-		ChiShare:       r.Group().NewScalar().SetNat(ChiShare.Mod(r.Group().Order())),
+		round3:           r,
+		DeltaShares:      map[party.ID]curve.Scalar{r.SelfID(): DeltaShareScalar},
+		BigDeltaShares:   map[party.ID]curve.Point{r.SelfID(): BigDeltaShare},
+		Gamma:            Gamma,
+		ChiShare:         r.Group().NewScalar().SetNat(ChiShare.Mod(r.Group().Order())),
+		verifiedMessage4: map[party.ID]struct{}{r.SelfID(): {}},
 	}, nil
 }
 
