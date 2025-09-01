@@ -7,6 +7,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/round"
+	common "github.com/xlabs/tss-common"
 )
 
 var _ round.Round = (*round5)(nil)
@@ -59,11 +60,13 @@ func (round5) VerifyMessage(round.Message) error { return nil }
 // StoreMessage implements round.Round.
 func (round5) StoreMessage(round.Message) error { return nil }
 
+func (r round5) CanFinalize() bool { return false }
+
 // Finalize implements round.Round
 //
 // - compute σ = ∑ⱼ σⱼ
 // - verify signature.
-func (r *round5) Finalize(chan<- *round.Message) (round.Session, error) {
+func (r *round5) Finalize(chan<- common.ParsedMessage) (round.Session, error) {
 	// compute σ = ∑ⱼ σⱼ
 	Sigma := r.Group().NewScalar()
 	for _, j := range r.PartyIDs() {

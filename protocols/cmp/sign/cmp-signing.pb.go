@@ -379,6 +379,50 @@ func (x *Broadcast4) GetBigDeltaShare() []byte {
 	return nil
 }
 
+type Broadcast5 struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SigmaShare    []byte                 `protobuf:"bytes,1,opt,name=SigmaShare,proto3" json:"SigmaShare,omitempty"` // curve.Scalar
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Broadcast5) Reset() {
+	*x = Broadcast5{}
+	mi := &file_proto_cmp_signing_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Broadcast5) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Broadcast5) ProtoMessage() {}
+
+func (x *Broadcast5) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_cmp_signing_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Broadcast5.ProtoReflect.Descriptor instead.
+func (*Broadcast5) Descriptor() ([]byte, []int) {
+	return file_proto_cmp_signing_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Broadcast5) GetSigmaShare() []byte {
+	if x != nil {
+		return x.SigmaShare
+	}
+	return nil
+}
+
 var File_proto_cmp_signing_proto protoreflect.FileDescriptor
 
 const file_proto_cmp_signing_proto_rawDesc = "" +
@@ -412,7 +456,12 @@ const file_proto_cmp_signing_proto_rawDesc = "" +
 	"\n" +
 	"DeltaShare\x18\x01 \x01(\fR\n" +
 	"DeltaShare\x12$\n" +
-	"\rBigDeltaShare\x18\x02 \x01(\fR\rBigDeltaShareB\x14Z\x12protocols/cmp/signb\x06proto3"
+	"\rBigDeltaShare\x18\x02 \x01(\fR\rBigDeltaShare\",\n" +
+	"\n" +
+	"Broadcast5\x12\x1e\n" +
+	"\n" +
+	"SigmaShare\x18\x01 \x01(\fR\n" +
+	"SigmaShareB\x14Z\x12protocols/cmp/signb\x06proto3"
 
 var (
 	file_proto_cmp_signing_proto_rawDescOnce sync.Once
@@ -426,7 +475,7 @@ func file_proto_cmp_signing_proto_rawDescGZIP() []byte {
 	return file_proto_cmp_signing_proto_rawDescData
 }
 
-var file_proto_cmp_signing_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_proto_cmp_signing_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proto_cmp_signing_proto_goTypes = []any{
 	(*Broadcast2)(nil), // 0: xlabs.cmp.sign.Broadcast2
 	(*Message2)(nil),   // 1: xlabs.cmp.sign.Message2
@@ -434,6 +483,7 @@ var file_proto_cmp_signing_proto_goTypes = []any{
 	(*Message3)(nil),   // 3: xlabs.cmp.sign.Message3
 	(*Message4)(nil),   // 4: xlabs.cmp.sign.Message4
 	(*Broadcast4)(nil), // 5: xlabs.cmp.sign.Broadcast4
+	(*Broadcast5)(nil), // 6: xlabs.cmp.sign.Broadcast5
 }
 var file_proto_cmp_signing_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -454,7 +504,7 @@ func file_proto_cmp_signing_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_cmp_signing_proto_rawDesc), len(file_proto_cmp_signing_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

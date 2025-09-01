@@ -290,6 +290,12 @@ func (x *Message4) RoundNumber() int {
 	return 4
 }
 
+func (x *Message4) UnmarshalContent(grp curve.Curve) (*zklogstar.Proof, error) {
+	proofLog := zklogstar.Empty(grp)
+	err := proofLog.UnmarshalBinary(x.ProofLog)
+	return proofLog, err
+}
+
 func makeBroadcast4(DeltaShare curve.Scalar, BigDeltaShare curve.Point) (*Broadcast4, error) {
 	deltaShareBytes, err := DeltaShare.Curve().MarshalScalar(DeltaShare)
 	if err != nil {
@@ -320,4 +326,48 @@ func (x *Broadcast4) RoundNumber() int {
 
 func (x *Broadcast4) Reliable() bool {
 	return true
+}
+
+func (x *Broadcast4) UnmarshalContent(crv curve.Curve) (curve.Scalar, curve.Point, error) {
+	deltaShare, err := crv.UnmarshalScalar(x.DeltaShare)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	bigDeltaShare, err := crv.UnmarshalPoint(x.BigDeltaShare)
+	return deltaShare, bigDeltaShare, err
+}
+
+// -- round 5 --
+
+func makeBroadcast5(SigmaShare curve.Scalar) (*Broadcast5, error) {
+	sigmaShareBytes, err := SigmaShare.Curve().MarshalScalar(SigmaShare)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Broadcast5{
+		SigmaShare: sigmaShareBytes,
+	}, nil
+}
+
+func (x *Broadcast5) ValidateBasic() bool {
+	return x != nil && len(x.SigmaShare) > 0
+}
+
+func (x *Broadcast5) GetProtocol() common.ProtocolType {
+	return common.ProtocolECDSA
+}
+
+func (x *Broadcast5) RoundNumber() int {
+	return 5
+}
+
+func (x *Broadcast5) Reliable() bool {
+	return true
+}
+
+func (x *Broadcast5) UnmarshalContent(crv curve.Curve) (curve.Scalar, error) {
+	sigmaShare, err := crv.UnmarshalScalar(x.SigmaShare)
+	return sigmaShare, err
 }

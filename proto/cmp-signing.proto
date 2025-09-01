@@ -51,3 +51,7 @@ message Broadcast4 {
 	// BigDeltaShare = Δⱼ = [kⱼ]•Γⱼ
 	bytes BigDeltaShare = 2; // curve.Point
 }
+
+message Broadcast5{
+	bytes SigmaShare =1;// curve.Scalar
+}

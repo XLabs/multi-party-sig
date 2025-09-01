@@ -25,33 +25,30 @@ type round4 struct {
 
 	// ChiShare = χᵢ
 	ChiShare curve.Scalar
-}
 
-type message4 struct {
-	ProofLog *zklogstar.Proof
-}
-
-type broadcast4 struct {
-	round.NormalBroadcastContent
-	// DeltaShare = δⱼ
-	DeltaShare curve.Scalar
-	// BigDeltaShare = Δⱼ = [kⱼ]•Γⱼ
-	BigDeltaShare curve.Point
+	verifiedMessage4 map[party.ID]struct{}
 }
 
 // StoreBroadcastMessage implements round.BroadcastRound.
 //
 // - store δⱼ, Δⱼ
 func (r *round4) StoreBroadcastMessage(msg round.Message) error {
-	body, ok := msg.Content.(*broadcast4)
-	if !ok || body == nil {
+	body, ok := msg.Content.(*Broadcast4)
+	if !ok || !body.ValidateBasic() {
 		return round.ErrInvalidContent
 	}
-	if body.DeltaShare.IsZero() || body.BigDeltaShare.IsIdentity() {
+	deltaShare, bigDeltaShare, err := body.UnmarshalContent(r.Group())
+	if err != nil {
+		return err
+	}
+
+	if deltaShare.IsZero() || bigDeltaShare.IsIdentity() {
 		return round.ErrNilFields
 	}
-	r.BigDeltaShares[msg.From] = body.BigDeltaShare
-	r.DeltaShares[msg.From] = body.DeltaShare
+
+	r.BigDeltaShares[msg.From] = bigDeltaShare
+	r.DeltaShares[msg.From] = deltaShare
+
 	return nil
 }
 
@@ -60,8 +57,13 @@ func (r *round4) StoreBroadcastMessage(msg round.Message) error {
 // - Verify Π(log*)(ϕ”ᵢⱼ, Δⱼ, Γ).
 func (r *round4) VerifyMessage(msg round.Message) error {
 	from, to := msg.From, msg.To
-	body, ok := msg.Content.(*message4)
-	if !ok || body == nil {
+	body, ok := msg.Content.(*Message4)
+	if !ok || !body.ValidateBasic() {
+		return round.ErrInvalidContent
+	}
+
+	proofLog, err := body.UnmarshalContent(r.Group())
+	if err != nil {
 		return round.ErrInvalidContent
 	}
 
@@ -72,10 +74,11 @@ func (r *round4) VerifyMessage(msg round.Message) error {
 		Prover: r.Paillier[from],
 		Aux:    r.Pedersen[to],
 	}
-	if !body.ProofLog.Verify(r.HashForID(from), zkLogPublic) {
+	if !proofLog.Verify(r.HashForID(from), zkLogPublic) {
 		return errors.New("failed to validate log proof")
 	}
 
+	r.verifiedMessage4[from] = struct{}{}
 	return nil
 }
 
@@ -85,8 +88,27 @@ func (round4) StoreMessage(round.Message) error {
 }
 
 func (r round4) CanFinalize() bool {
-	// TODO:
-	return len(r.DeltaShares) > 0 && len(r.BigDeltaShares) > 0
+	t := r.Threshold() + 1
+	if len(r.verifiedMessage4) < t ||
+		len(r.DeltaShares) == 0 ||
+		len(r.BigDeltaShares) == 0 {
+		return false
+	}
+
+	for _, pid := range r.OtherPartyIDs() {
+		if _, ok := r.verifiedMessage4[pid]; !ok {
+			return false
+		}
+
+		if _, ok := r.DeltaShares[pid]; !ok {
+			return false
+		}
+
+		if _, ok := r.BigDeltaShares[pid]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // Finalize implements round.Round
@@ -123,7 +145,11 @@ func (r *round4) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	SigmaShare := r.Group().NewScalar().Set(R).Mul(r.ChiShare).Add(km)
 
 	// Send to all
-	err := r.BroadcastMessage(out, &broadcast5{SigmaShare: SigmaShare})
+	msg, err := makeBroadcast5(SigmaShare)
+	if err != nil {
+		return r, err
+	}
+	err = r.BroadcastMessage(out, msg)
 	if err != nil {
 		return r, err
 	}
@@ -137,25 +163,14 @@ func (r *round4) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	}, nil
 }
 
-// RoundNumber implements round.Content.
-func (message4) RoundNumber() round.Number { return 4 }
-
 // MessageContent implements round.Round.
 func (r *round4) MessageContent() round.Content {
-	return &message4{
-		ProofLog: zklogstar.Empty(r.Group()),
-	}
+	return &Message4{}
 }
-
-// RoundNumber implements round.Content.
-func (broadcast4) RoundNumber() round.Number { return 4 }
 
 // BroadcastContent implements round.BroadcastRound.
 func (r *round4) BroadcastContent() round.BroadcastContent {
-	return &broadcast4{
-		DeltaShare:    r.Group().NewScalar(),
-		BigDeltaShare: r.Group().NewPoint(),
-	}
+	return &Broadcast4{}
 }
 
 // Number implements round.Round.
