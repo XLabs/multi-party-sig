@@ -248,12 +248,12 @@ func makeBroadcast4(
 	// Prm = zkprm.Proof
 	prm *zkprm.Proof,
 ) (round.Content, error) {
-	modBytes, err := cbor.Marshal(mod)
+	modBytes, err := cbor.Marshal(mod) // TODO:marshal without CBOR.
 	if err != nil {
 		return nil, err
 	}
 
-	prmBytes, err := cbor.Marshal(prm)
+	prmBytes, err := cbor.Marshal(prm) // TODO:marshal without CBOR.
 	if err != nil {
 		return nil, err
 	}
