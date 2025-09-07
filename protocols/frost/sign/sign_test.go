@@ -329,9 +329,18 @@ func TestSignTaproot(t *testing.T) {
 	checkOutputTaproot(t, rounds, newPublicKey, steak)
 }
 
+func genKeyPair(group curve.Curve) (curve.Scalar, curve.Point) {
+	for {
+		secret := sample.Scalar(rand.Reader, group)
+		publicKey := secret.ActOnBase()
+
+		if PublicKeyValidForContract(publicKey) {
+			return secret, publicKey
+		}
+	}
+}
 func TestSigMarshal(t *testing.T) {
-	secret := sample.Scalar(rand.Reader, curve.Secp256k1{})
-	public := secret.ActOnBase()
+	secret, public := genKeyPair(curve.Secp256k1{})
 
 	msgHash := [32]byte{1, 2, 3, 4, 5}
 
