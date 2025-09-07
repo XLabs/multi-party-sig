@@ -198,7 +198,7 @@ func (c *Commitment) MarshalBinary() ([]byte, error) {
 		return nil, errInvalidCommitment
 	}
 	var buf bytes.Buffer
-	if err := marshal.WriteItemsToBuffer(&buf, c.S, c.A, c.D); err != nil {
+	if err := marshal.WritePrimitives(&buf, c.S, c.A, c.D); err != nil {
 		return nil, err
 	}
 
@@ -220,28 +220,14 @@ func (c *Commitment) UnmarshalBinary(data []byte, grp curve.Curve) ([]byte, erro
 		return nil, errNilGroup
 	}
 
-	sz, data, err := marshal.ReadUint16Sizes(3, data)
+	c.S = new(saferith.Nat)
+	c.A = new(paillier.Ciphertext)
+	c.D = new(saferith.Nat)
+
+	data, err := marshal.ReadPrimitives(data, c.S, c.A, c.D)
 	if err != nil {
 		return nil, err
 	}
-
-	c.S = new(saferith.Nat)
-	if err = c.S.UnmarshalBinary(data[:sz[0]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[0]:]
-
-	c.A = new(paillier.Ciphertext)
-	if err := c.A.UnmarshalBinary(data[:sz[1]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[1]:]
-
-	c.D = new(saferith.Nat)
-	if err := c.D.UnmarshalBinary(data[:sz[2]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[2]:]
 
 	ptByteSize := grp.PointBinarySize()
 	if len(data) < ptByteSize {
@@ -266,7 +252,7 @@ func (p *Proof) MarshalBinary() ([]byte, error) {
 	}
 	buf := bytes.NewBuffer(commbytes)
 
-	if err := marshal.WriteItemsToBuffer(buf, p.Z1, p.Z2, p.Z3); err != nil {
+	if err := marshal.WritePrimitives(buf, p.Z1, p.Z2, p.Z3); err != nil {
 		return nil, err
 	}
 
@@ -287,26 +273,10 @@ func (p *Proof) UnmarshalBinary(data []byte) error {
 		return err
 	}
 
-	sz, data, err := marshal.ReadUint16Sizes(3, data)
-	if err != nil {
-		return err
-	}
 	p.Z1 = new(saferith.Int)
-	if err := p.Z1.UnmarshalBinary(data[:sz[0]]); err != nil {
-		return err
-	}
-	data = data[sz[0]:]
-
 	p.Z2 = new(saferith.Nat)
-	if err := p.Z2.UnmarshalBinary(data[:sz[1]]); err != nil {
-		return err
-	}
-	data = data[sz[1]:]
-
 	p.Z3 = new(saferith.Int)
-	if err := p.Z3.UnmarshalBinary(data[:sz[2]]); err != nil {
-		return err
-	}
 
-	return nil
+	_, err = marshal.ReadPrimitives(data, p.Z1, p.Z2, p.Z3)
+	return err
 }

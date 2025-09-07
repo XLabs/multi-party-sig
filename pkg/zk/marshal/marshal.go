@@ -16,9 +16,9 @@ var (
 
 // Since ZK proofs use relatively little memory, we store their numbers in uint16.
 
-// WriteItemsToBuffer writes uint16 sizes for each item, then marshal
+// WritePrimitives writes uint16 sizes for each item, then marshal
 // each item and appends it to the buffer.
-func WriteItemsToBuffer(buf *bytes.Buffer, toMarshal ...encoding.BinaryMarshaler) error {
+func WritePrimitives(buf *bytes.Buffer, toMarshal ...encoding.BinaryMarshaler) error {
 	items := make([][]byte, len(toMarshal))
 	totalLength := 0
 
@@ -73,6 +73,27 @@ func ReadUint16Sizes(numItems int, data []byte) ([]int, []byte, error) {
 	}
 
 	return sizes, data, nil
+}
+
+func ReadPrimitives(data []byte, toUnmarshal ...encoding.BinaryUnmarshaler) ([]byte, error) {
+	sizes, data, err := ReadUint16Sizes(len(toUnmarshal), data)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, size := range sizes {
+		if toUnmarshal[i] == nil {
+			return nil, errNilItem
+		}
+
+		if err := toUnmarshal[i].UnmarshalBinary(data[:size]); err != nil {
+			return nil, err
+		}
+
+		data = data[size:]
+	}
+
+	return data, nil
 }
 
 func sum(sizes []int) int {

@@ -276,7 +276,7 @@ func (c *Commitment) MarshalBinary() ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	if err := marshal.WriteItemsToBuffer(&buf, c.A, c.By, c.E, c.S, c.F, c.T); err != nil {
+	if err := marshal.WritePrimitives(&buf, c.A, c.By, c.E, c.S, c.F, c.T); err != nil {
 		return nil, err
 	}
 
@@ -295,46 +295,17 @@ func (c *Commitment) UnmarshalBinary(data []byte, grp curve.Curve) ([]byte, erro
 		return nil, errNilCommitment
 	}
 
-	sz, data, err := marshal.ReadUint16Sizes(6, data)
+	c.A = new(paillier.Ciphertext)
+	c.By = new(paillier.Ciphertext)
+	c.E = new(saferith.Nat)
+	c.S = new(saferith.Nat)
+	c.F = new(saferith.Nat)
+	c.T = new(saferith.Nat)
+
+	data, err := marshal.ReadPrimitives(data, c.A, c.By, c.E, c.S, c.F, c.T)
 	if err != nil {
 		return nil, err
 	}
-
-	c.A = new(paillier.Ciphertext)
-	if err := c.A.UnmarshalBinary(data[:sz[0]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[0]:]
-
-	c.By = new(paillier.Ciphertext)
-	if err := c.By.UnmarshalBinary(data[:sz[1]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[1]:]
-
-	c.E = new(saferith.Nat)
-	if err := c.E.UnmarshalBinary(data[:sz[2]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[2]:]
-
-	c.S = new(saferith.Nat)
-	if err := c.S.UnmarshalBinary(data[:sz[3]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[3]:]
-
-	c.F = new(saferith.Nat)
-	if err := c.F.UnmarshalBinary(data[:sz[4]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[4]:]
-
-	c.T = new(saferith.Nat)
-	if err := c.T.UnmarshalBinary(data[:sz[5]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[5]:]
 
 	ptSize := grp.PointBinarySize()
 	if len(data) < ptSize {
@@ -363,7 +334,7 @@ func (p *Proof) MarshalBinary() ([]byte, error) {
 
 	buf := bytes.NewBuffer(commitmentBytes)
 
-	if err := marshal.WriteItemsToBuffer(buf, p.Z1, p.Z2, p.Z3, p.Z4, p.W, p.Wy); err != nil {
+	if err := marshal.WritePrimitives(buf, p.Z1, p.Z2, p.Z3, p.Z4, p.W, p.Wy); err != nil {
 		return nil, err
 	}
 
@@ -385,46 +356,16 @@ func (p *Proof) UnmarshalBinary(data []byte) error {
 		return err
 	}
 
-	sz, rest, err := marshal.ReadUint16Sizes(6, rest)
-	if err != nil {
-		return err
-	}
-
 	p.Z1 = new(saferith.Int)
-	if err := p.Z1.UnmarshalBinary(rest[:sz[0]]); err != nil {
-		return err
-	}
-	rest = rest[sz[0]:]
-
 	p.Z2 = new(saferith.Int)
-	if err := p.Z2.UnmarshalBinary(rest[:sz[1]]); err != nil {
-		return err
-	}
-	rest = rest[sz[1]:]
-
 	p.Z3 = new(saferith.Int)
-	if err := p.Z3.UnmarshalBinary(rest[:sz[2]]); err != nil {
-		return err
-	}
-	rest = rest[sz[2]:]
-
 	p.Z4 = new(saferith.Int)
-	if err := p.Z4.UnmarshalBinary(rest[:sz[3]]); err != nil {
-		return err
-	}
-	rest = rest[sz[3]:]
-
 	p.W = new(saferith.Nat)
-	if err := p.W.UnmarshalBinary(rest[:sz[4]]); err != nil {
-		return err
-	}
-	rest = rest[sz[4]:]
-
 	p.Wy = new(saferith.Nat)
-	if err := p.Wy.UnmarshalBinary(rest[:sz[5]]); err != nil {
+
+	if _, err = marshal.ReadPrimitives(rest, p.Z1, p.Z2, p.Z3, p.Z4, p.W, p.Wy); err != nil {
 		return err
 	}
-	rest = rest[sz[5]:]
 
 	return nil
 }

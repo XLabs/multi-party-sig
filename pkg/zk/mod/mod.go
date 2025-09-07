@@ -291,7 +291,7 @@ func (r *Response) MarshalBinary() ([]byte, error) {
 	}
 
 	buf := new(bytes.Buffer)
-	marshal.WriteItemsToBuffer(buf, r.X, r.Z)
+	marshal.WritePrimitives(buf, r.X, r.Z)
 
 	var ab byte
 	if r.A {
@@ -343,7 +343,7 @@ func (p *Proof) MarshalBinary() ([]byte, error) {
 		return nil, errInvalidProof
 	}
 	buf := bytes.NewBuffer(nil)
-	marshal.WriteItemsToBuffer(buf, p.W)
+	marshal.WritePrimitives(buf, p.W)
 
 	data, err := p.Responses[0].MarshalBinary()
 	if err != nil {
@@ -370,16 +370,12 @@ func (p *Proof) UnmarshalBinary(data []byte) error {
 		return errInvalidProof
 	}
 
-	sz, data, err := marshal.ReadUint16Sizes(1, data)
+	p.W = new(saferith.Nat)
+
+	data, err := marshal.ReadPrimitives(data, p.W)
 	if err != nil {
 		return err
 	}
-
-	p.W = new(saferith.Nat)
-	if err := p.W.UnmarshalBinary(data[:sz[0]]); err != nil {
-		return err
-	}
-	data = data[sz[0]:]
 
 	for i := range p.Responses {
 		rest, err := p.Responses[i].UnmarshalBinary(data)
