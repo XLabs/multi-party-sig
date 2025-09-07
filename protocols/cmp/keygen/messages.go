@@ -248,7 +248,7 @@ func makeBroadcast4(
 	// Prm = zkprm.Proof
 	prm *zkprm.Proof,
 ) (round.Content, error) {
-	modBytes, err := cbor.Marshal(mod) // TODO:marshal without CBOR.
+	modBytes, err := mod.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
@@ -285,9 +285,8 @@ func (x *Broadcast4) ValidateBasic() bool {
 }
 
 func (x *Broadcast4) UnmarshalContent() (*zkmod.Proof, *zkprm.Proof, error) {
-	// TODO: Using cbor is unsafe. might cause panic due to demand of large buffer.
 	mod := &zkmod.Proof{}
-	if err := cbor.Unmarshal(x.Mod, mod); err != nil {
+	if err := mod.UnmarshalBinary(x.Mod); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal Mod proof: %w", err)
 	}
 
