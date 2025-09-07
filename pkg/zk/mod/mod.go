@@ -312,21 +312,13 @@ func (r *Response) UnmarshalBinary(data []byte) ([]byte, error) {
 		return nil, errInvalidResp
 	}
 
-	sz, data, err := marshal.ReadUint16Sizes(2, data)
+	r.X = new(saferith.Nat)
+	r.Z = new(saferith.Nat)
+
+	data, err := marshal.ReadPrimitives(data, r.X, r.Z)
 	if err != nil {
 		return nil, err
 	}
-	r.X = new(saferith.Nat)
-	if err := r.X.UnmarshalBinary(data[:sz[0]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[0]:]
-
-	r.Z = new(saferith.Nat)
-	if err := r.Z.UnmarshalBinary(data[:sz[1]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[1]:]
 
 	if len(data) < 1 {
 		return nil, errInvalidResp

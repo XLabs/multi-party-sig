@@ -167,30 +167,11 @@ func (c *Commitment) UnmarshalBinary(data []byte) ([]byte, error) {
 		return nil, errInvalidCommitment
 	}
 
-	sz, data, err := marshal.ReadUint16Sizes(3, data)
-	if err != nil {
-		return nil, errInvalidCommitment
-	}
-
 	c.S = new(saferith.Nat)
-	if err = c.S.UnmarshalBinary(data[:sz[0]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[0]:]
-
 	c.A = new(paillier.Ciphertext)
-	if err = c.A.UnmarshalBinary(data[:sz[1]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[1]:]
-
 	c.C = new(saferith.Nat)
-	if err = c.C.UnmarshalBinary(data[:sz[2]]); err != nil {
-		return nil, err
-	}
-	data = data[sz[2]:]
 
-	return data, nil
+	return marshal.ReadPrimitives(data, c.S, c.A, c.C)
 }
 
 func (p *Proof) MarshalBinary() ([]byte, error) {

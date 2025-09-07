@@ -53,11 +53,16 @@ func WritePrimitives(buf *bytes.Buffer, toMarshal ...encoding.BinaryMarshaler) e
 	return nil
 }
 
-// ReadUint16Sizes reads numItems big-endian uint16 sizes from data, returning
+// readUint16Sizes reads numItems big-endian uint16 sizes from data, returning
 // the sizes and the remaining data. It fails fast if data is too short.
-func ReadUint16Sizes(numItems int, data []byte) ([]int, []byte, error) {
+func readUint16Sizes(numItems int, data []byte) ([]int, []byte, error) {
 	need := 2 * numItems
 	if len(data) < need {
+		return nil, data, ErrInvalidDataSize
+	}
+
+	// prevent overflow in sum(sizes)
+	if numItems > math.MaxInt32/2 {
 		return nil, data, ErrInvalidDataSize
 	}
 
@@ -76,7 +81,7 @@ func ReadUint16Sizes(numItems int, data []byte) ([]int, []byte, error) {
 }
 
 func ReadPrimitives(data []byte, toUnmarshal ...encoding.BinaryUnmarshaler) ([]byte, error) {
-	sizes, data, err := ReadUint16Sizes(len(toUnmarshal), data)
+	sizes, data, err := readUint16Sizes(len(toUnmarshal), data)
 	if err != nil {
 		return nil, err
 	}
