@@ -15,7 +15,10 @@ import (
 	common "github.com/xlabs/tss-common"
 )
 
-const Rounds round.Number = 5
+const (
+	Rounds       round.Number = 5
+	ProtocolName              = common.ProtocolECDSA + ":keygen"
+)
 
 func Start(info round.Info, pl *pool.Pool, c *config.Config) protocol.StartFunc {
 	return func(sessionID []byte) (_ round.Session, err error) {

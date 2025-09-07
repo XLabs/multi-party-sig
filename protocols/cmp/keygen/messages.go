@@ -20,7 +20,7 @@ import (
 
 // GetProtocol implements round.Content.
 func (b *Broadcast2) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA // TODO: Should we add some modifier? stating this is ecdsa:keygen?
+	return ProtocolName
 }
 
 // Reliable implements round.ReliableBroadcastContent.
@@ -157,7 +157,7 @@ func (b *Broadcast3) unmarshalPaillierAndPedersen() (*saferith.Modulus, *saferit
 
 // GetProtocol implements round.Content.
 func (b *Broadcast3) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return ProtocolName
 }
 
 // Reliable implements round.ReliableBroadcastContent.
@@ -210,7 +210,7 @@ func makeMessage4(
 
 // GetProtocol implements round.Content.
 func (b *Message4) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return ProtocolName
 }
 
 // Reliable implements round.ReliableBroadcastContent.
@@ -271,7 +271,7 @@ func (x *Broadcast4) Reliable() bool {
 
 // GetProtocol implements round.Content.
 func (x *Broadcast4) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return ProtocolName
 }
 
 // RoundNumber implements round.Content.
@@ -327,7 +327,7 @@ func (x *Broadcast5) Reliable() bool {
 
 // GetProtocol implements round.Content.
 func (x *Broadcast5) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return ProtocolName
 }
 
 // RoundNumber implements round.Content.

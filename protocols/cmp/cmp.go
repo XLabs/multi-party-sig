@@ -32,7 +32,7 @@ func EmptyConfig(group curve.Curve) *Config {
 // Returns *cmp.Config if successful.
 func Keygen(group curve.Curve, selfID party.ID, participants []party.ID, threshold int, pl *pool.Pool) protocol.StartFunc {
 	info := round.Info{
-		ProtocolID:       "cmp/keygen-threshold",
+		ProtocolID:       string(keygen.ProtocolName),
 		FinalRoundNumber: keygen.Rounds,
 		SelfID:           selfID,
 		PartyIDs:         participants,

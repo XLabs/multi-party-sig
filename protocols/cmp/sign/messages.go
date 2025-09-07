@@ -35,7 +35,7 @@ func makeBroadcast2(k, g *paillier.Ciphertext) (*Broadcast2, error) {
 
 // GetProtocol implements round.Content.
 func (b *Broadcast2) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA // TODO: Should we add some modifier? stating this is ecdsa:sign?
+	return ProtocolName
 }
 
 func (x *Broadcast2) ValidateBasic() bool {
@@ -79,7 +79,7 @@ func MakeMessage2(proofEnc *zkenc.Proof) (*Message2, error) {
 
 // GetProtocol implements round.Content.
 func (b *Message2) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA // TODO: Should we add some modifier? stating this is ecdsa:sign?
+	return ProtocolName
 }
 
 func (x *Message2) ValidateBasic() bool {
@@ -125,7 +125,7 @@ func (x *Broadcast3) ValidateBasic() bool {
 }
 
 func (x *Broadcast3) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return ProtocolName
 }
 
 func (x *Broadcast3) RoundNumber() int {
@@ -195,7 +195,7 @@ func makeMessage3(
 }
 
 func (x *Message3) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return ProtocolName
 }
 
 func (x *Message3) ValidateBasic() bool {
@@ -275,7 +275,7 @@ func makeMessage4(proofLog *zklogstar.Proof) (*Message4, error) {
 }
 
 func (x *Message4) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return ProtocolName
 }
 
 func (x *Message4) ValidateBasic() bool {
@@ -317,7 +317,7 @@ func (x *Broadcast4) ValidateBasic() bool {
 }
 
 func (x *Broadcast4) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return ProtocolName
 }
 
 func (x *Broadcast4) RoundNumber() int {
@@ -356,7 +356,7 @@ func (x *Broadcast5) ValidateBasic() bool {
 }
 
 func (x *Broadcast5) GetProtocol() common.ProtocolType {
-	return common.ProtocolECDSA
+	return ProtocolName
 }
 
 func (x *Broadcast5) RoundNumber() int {

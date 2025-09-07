@@ -19,7 +19,7 @@ import (
 
 // protocolSignID for the "3 round" variant using echo broadcast.
 const (
-	protocolSignID                  = "cmp/sign"
+	ProtocolName                    = common.ProtocolECDSA + ":sign"
 	protocolSignRounds round.Number = 5
 )
 
@@ -38,7 +38,7 @@ func StartSign(config *config.Config, signers []party.ID, message []byte, pl *po
 		}
 
 		info := round.Info{
-			ProtocolID:       protocolSignID,
+			ProtocolID:       string(ProtocolName),
 			FinalRoundNumber: protocolSignRounds,
 			SelfID:           config.ID,
 			PartyIDs:         signers,
