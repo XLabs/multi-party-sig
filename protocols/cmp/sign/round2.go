@@ -207,6 +207,8 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	}, nil
 }
 
+func (round2) MessageContent() round.Content { return &Message2{} }
+
 // BroadcastContent implements round.BroadcastRound.
 func (round2) BroadcastContent() round.BroadcastContent { return &Broadcast2{} }
 
