@@ -36,7 +36,7 @@ func TestRound(t *testing.T) {
 	rounds := make([]round.Session, 0, N)
 	for _, partyID := range partyIDs {
 		c := configs[partyID]
-		r, err := StartSign(c, partyIDs, messageHash, pl)(nil)
+		r, err := StartSign(c, partyIDs, messageHash, pl)(test.TestTrackingID.ToByteString())
 		require.NoError(t, err, "round creation should not result in an error")
 		rounds = append(rounds, r)
 	}

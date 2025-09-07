@@ -12,12 +12,18 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/protocol"
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	"github.com/xlabs/multi-party-sig/protocols/cmp/config"
+	common "github.com/xlabs/tss-common"
 )
 
 const Rounds round.Number = 5
 
 func Start(info round.Info, pl *pool.Pool, c *config.Config) protocol.StartFunc {
 	return func(sessionID []byte) (_ round.Session, err error) {
+		info.TrackingID = &common.TrackingID{}
+		if err := info.TrackingID.FromString(string(sessionID)); err != nil {
+			return nil, fmt.Errorf("sign.Create: invalid sessionID: %w", err)
+		}
+
 		var helper *round.Helper
 		if c == nil {
 			helper, err = round.NewSession(info, sessionID, pl)

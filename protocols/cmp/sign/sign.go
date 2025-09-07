@@ -14,6 +14,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/protocol"
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	"github.com/xlabs/multi-party-sig/protocols/cmp/config"
+	common "github.com/xlabs/tss-common"
 )
 
 // protocolSignID for the "3 round" variant using echo broadcast.
@@ -25,6 +26,11 @@ const (
 func StartSign(config *config.Config, signers []party.ID, message []byte, pl *pool.Pool) protocol.StartFunc {
 	return func(sessionID []byte) (round.Session, error) {
 		group := config.Group
+
+		trackingID := &common.TrackingID{}
+		if err := trackingID.FromString(string(sessionID)); err != nil {
+			return nil, fmt.Errorf("sign.Create: invalid sessionID: %w", err)
+		}
 
 		// this could be used to indicate a pre-signature later on
 		if len(message) == 0 {
@@ -38,6 +44,7 @@ func StartSign(config *config.Config, signers []party.ID, message []byte, pl *po
 			PartyIDs:         signers,
 			Threshold:        config.Threshold,
 			Group:            config.Group,
+			TrackingID:       trackingID,
 		}
 
 		helper, err := round.NewSession(info, sessionID, pl, config, types.SigningMessage(message))
