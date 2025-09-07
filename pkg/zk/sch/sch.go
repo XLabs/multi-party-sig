@@ -125,8 +125,41 @@ func (c *Commitment) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
+var (
+	errInvalidCommitment = errors.New("invalid commitment")
+)
+
 func (c *Commitment) MarshalBinary() ([]byte, error) {
-	return c.C.Curve().MarshalPoint(c.C)
+	if c == nil || c.C == nil {
+		return nil, errInvalidCommitment
+	}
+	crv := c.C.Curve()
+	if crv == nil {
+		return nil, errInvalidCommitment
+	}
+
+	return crv.MarshalPoint(c.C)
+}
+
+// Assumes someone had set c.C to a valid curve point, otherwise it won't be able unmarshal.
+func (c *Commitment) UnmarshalBinary(data []byte) error {
+	if c == nil || c.C == nil {
+		return errInvalidCommitment
+	}
+
+	crv := c.C.Curve()
+	if crv == nil {
+		return errInvalidCommitment
+	}
+
+	point, err := crv.UnmarshalPoint(data)
+	if err != nil {
+		return err
+	}
+
+	c.C = point
+
+	return nil
 }
 
 func UnmarshalCommitment(data []byte, group curve.Curve) (*Commitment, error) {
