@@ -29,13 +29,13 @@ type Response struct {
 	// A, B s.t. y' = (-1)ᵃ wᵇ y
 	A, B bool
 	// X = y' ^ {1/4}
-	X *big.Int
+	X *saferith.Nat
 	// Z = y^{N⁻¹ mod ϕ(N)}
-	Z *big.Int
+	Z *saferith.Nat
 }
 
 type Proof struct {
-	W         *big.Int
+	W         *saferith.Nat
 	Responses [params.StatParam]Response
 }
 
@@ -124,17 +124,21 @@ func (p *Proof) IsValid(public Public) bool {
 	if p == nil {
 		return false
 	}
+	w := p.W.Big()
 
 	N := public.N.Big()
-	if big.Jacobi(p.W, N) != -1 {
+	if big.Jacobi(w, N) != -1 {
 		return false
 	}
 
-	if !arith.IsValidBigModN(N, p.W) {
+	if !arith.IsValidBigModN(N, w) {
 		return false
 	}
 	for _, r := range p.Responses {
-		if !arith.IsValidBigModN(N, r.X, r.Z) {
+		x := r.X.Big()
+		z := r.Z.Big()
+
+		if !arith.IsValidBigModN(N, x, z) {
 			return false
 		}
 	}
@@ -184,15 +188,15 @@ func NewProof(hash *hash.Hash, private Private, public Public, pl *pool.Pool) *P
 		rs[i] = Response{
 			A: a,
 			B: b,
-			X: x.Big(),
-			Z: z.Big(),
+			X: x,
+			Z: z,
 		}
 
 		return nil
 	})
 
 	return &Proof{
-		W:         w.Big(),
+		W:         w,
 		Responses: rs,
 	}
 }
@@ -200,14 +204,16 @@ func NewProof(hash *hash.Hash, private Private, public Public, pl *pool.Pool) *P
 func (r *Response) Verify(n, w, y *big.Int) bool {
 	var lhs, rhs big.Int
 
+	z := r.Z.Big()
 	// lhs = zⁿ mod n
-	lhs.Exp(r.Z, n, n)
+	lhs.Exp(z, n, n)
 	if lhs.Cmp(y) != 0 {
 		return false
 	}
 
+	x := r.X.Big()
 	// lhs = x⁴ (mod n)
-	lhs.Mul(r.X, r.X)
+	lhs.Mul(x, x)
 	lhs.Mul(&lhs, &lhs)
 	lhs.Mod(&lhs, n)
 
@@ -235,21 +241,23 @@ func (p *Proof) Verify(public Public, hash *hash.Hash, pl *pool.Pool) bool {
 		return false
 	}
 
-	if big.Jacobi(p.W, n) != -1 {
+	w := p.W.Big()
+
+	if big.Jacobi(w, n) != -1 {
 		return false
 	}
 
-	if !arith.IsValidBigModN(n, p.W) {
+	if !arith.IsValidBigModN(n, w) {
 		return false
 	}
 
 	// get [yᵢ] <- ℤₙ
-	ys, err := challenge(hash, nMod, p.W)
+	ys, err := challenge(hash, nMod, w)
 	if err != nil {
 		return false
 	}
 	verifications := pl.Parallelize(params.StatParam, func(i int) interface{} {
-		return p.Responses[i].Verify(n, p.W, ys[i].Big())
+		return p.Responses[i].Verify(n, w, ys[i].Big())
 	})
 	for i := 0; i < len(verifications); i++ {
 		if !verifications[i].(bool) {

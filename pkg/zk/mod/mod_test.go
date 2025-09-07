@@ -42,9 +42,9 @@ func TestMod(t *testing.T) {
 
 	assert.True(t, proof3.Verify(public, hash.New(), pl))
 
-	proof.W = big.NewInt(0)
+	proof.W = (&saferith.Nat{}).SetUint64(0)
 	for idx := range proof.Responses {
-		proof.Responses[idx].X = big.NewInt(0)
+		proof.Responses[idx].X = (&saferith.Nat{}).SetUint64(0)
 	}
 
 	assert.False(t, proof.Verify(public, hash.New(), pl), "proof should have failed")
