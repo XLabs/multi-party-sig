@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	ErrSizeOverflow    = errors.New("part of the proof is too large to encode as uint16")
-	ErrInvalidDataSize = errors.New("data is too short to contain unmarshal sizes")
-	errNilItem         = errors.New("nil item found")
+	ErrSizeOverflow            = errors.New("part of the proof is too large to encode as uint16")
+	ErrInvalidDataSize         = errors.New("data is too short to contain unmarshal sizes")
+	errNilItem                 = errors.New("nil item found")
+	errNonPositiveAnnouncedLen = errors.New("item has non-positive announced length")
 )
 
 /*
@@ -27,7 +28,7 @@ which is important for keeping the overall proof size small.
 type Primitive interface {
 	encoding.BinaryMarshaler
 	encoding.BinaryUnmarshaler
-	// returns the expected max byte size of MarshalBinary output.
+	// returns the expected max bits size of MarshalBinary output.
 	// returns -1 for error.
 	AnnouncedLen() int
 }
@@ -44,12 +45,14 @@ func WritePrimitives(buf *bytes.Buffer, toMarshal ...Primitive) error {
 		if item == nil {
 			return errNilItem
 		}
-		announcedLen := item.AnnouncedLen()
-		if announcedLen > math.MaxUint16 {
+
+		// in bytes
+		announcedLen := (item.AnnouncedLen() + 7) / 8
+		switch {
+		case announcedLen < 0:
+			return errNonPositiveAnnouncedLen
+		case announcedLen > math.MaxInt32-totalLength:
 			return ErrSizeOverflow
-		}
-		if announcedLen <= 0 {
-			return errors.New("item has non-positive announced length")
 		}
 
 		b, err := item.MarshalBinary()
@@ -72,6 +75,7 @@ func WritePrimitives(buf *bytes.Buffer, toMarshal ...Primitive) error {
 	for _, b := range items {
 		_, _ = buf.Write(b) // ignoring err since doc states it is always nil.
 	}
+
 	return nil
 }
 
