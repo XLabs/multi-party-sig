@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/cronokirby/saferith"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/xlabs/multi-party-sig/internal/types"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
@@ -253,7 +252,7 @@ func makeBroadcast4(
 		return nil, err
 	}
 
-	prmBytes, err := cbor.Marshal(prm) // TODO:marshal without CBOR.
+	prmBytes, err := prm.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +291,7 @@ func (x *Broadcast4) UnmarshalContent() (*zkmod.Proof, *zkprm.Proof, error) {
 
 	// TODO: Using cbor is unsafe. might cause panic due to demand of large buffer.
 	prm := &zkprm.Proof{}
-	if err := cbor.Unmarshal(x.Prm, prm); err != nil {
+	if err := prm.UnmarshalBinary(x.Prm); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal Prm proof: %w", err)
 	}
 

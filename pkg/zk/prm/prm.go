@@ -1,7 +1,9 @@
 package zkprm
 
 import (
+	"bytes"
 	"crypto/rand"
+	"errors"
 	"io"
 	"math/big"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
 	"github.com/xlabs/multi-party-sig/pkg/pool"
+	"github.com/xlabs/multi-party-sig/pkg/zk/marshal"
 )
 
 type Public struct {
@@ -145,4 +148,79 @@ func challenge(hash *hash.Hash, public Public, A [params.StatParam]*big.Int) (es
 	}
 
 	return
+}
+
+func (p *Proof) MarshalBinary() (data []byte, err error) {
+	prims := make([]marshal.Primitive, len(p.As))
+	for i := range p.As {
+		prims[i] = (*marshal.BigInt)(p.As[i])
+	}
+
+	bf := bytes.NewBuffer(nil)
+	if err := marshal.WritePrimitives(bf, prims...); err != nil {
+		return nil, err
+	}
+	prims = make([]marshal.Primitive, len(p.Zs))
+	for i := range p.Zs {
+		prims[i] = (*marshal.BigInt)(p.Zs[i])
+	}
+	if err := marshal.WritePrimitives(bf, prims...); err != nil {
+		return nil, err
+	}
+
+	return bf.Bytes(), nil
+}
+
+func (p *Proof) UnmarshalBinary(data []byte) error {
+	if p == nil {
+		return errors.New("nil prm proof")
+	}
+
+	as := makeReadBuffer()
+	rest, err := marshal.ReadPrimitives(data, as...)
+	if err != nil {
+		return err
+	}
+
+	p.As, err = castToProofsArray(as)
+	if err != nil {
+		return err
+	}
+
+	zs := makeReadBuffer()
+	_, err = marshal.ReadPrimitives(rest, zs...)
+	if err != nil {
+		return err
+	}
+
+	p.Zs, err = castToProofsArray(zs)
+
+	return err
+}
+
+func makeReadBuffer() []marshal.Primitive {
+	as := make([]marshal.Primitive, params.StatParam)
+	for i := range as {
+		as[i] = new(marshal.BigInt)
+	}
+
+	return as
+}
+
+// ensures the slice is of the correct length and type.
+func castToProofsArray(as []marshal.Primitive) ([params.StatParam]*big.Int, error) {
+	if len(as) != params.StatParam {
+		return [params.StatParam]*big.Int{}, errors.New("invalid length")
+	}
+
+	res := [params.StatParam]*big.Int{}
+	for i, v := range as {
+		b, ok := v.(*marshal.BigInt)
+		if !ok {
+			return [params.StatParam]*big.Int{}, errors.New("type assertion failed")
+		}
+		res[i] = (*big.Int)(b)
+	}
+
+	return res, nil
 }
