@@ -176,51 +176,36 @@ func (p *Proof) UnmarshalBinary(data []byte) error {
 		return errors.New("nil prm proof")
 	}
 
-	as := makeReadBuffer()
-	rest, err := marshal.ReadPrimitives(data, as...)
+	p.makeBuffers()
+
+	rest, err := marshal.ReadPrimitives(data, intoPrimBuffer(p.As[:])...)
 	if err != nil {
 		return err
 	}
 
-	p.As, err = castToProofsArray(as)
+	_, err = marshal.ReadPrimitives(rest, intoPrimBuffer(p.Zs[:])...)
 	if err != nil {
 		return err
 	}
-
-	zs := makeReadBuffer()
-	_, err = marshal.ReadPrimitives(rest, zs...)
-	if err != nil {
-		return err
-	}
-
-	p.Zs, err = castToProofsArray(zs)
 
 	return err
 }
 
-func makeReadBuffer() []marshal.Primitive {
-	as := make([]marshal.Primitive, params.StatParam)
-	for i := range as {
-		as[i] = new(marshal.BigInt)
+// converts a slice of *big.Int to a slice of marshal.Primitive
+func intoPrimBuffer(in []*big.Int) []marshal.Primitive {
+	out := make([]marshal.Primitive, len(in))
+	for i := range in {
+		out[i] = (*marshal.BigInt)(in[i])
 	}
 
-	return as
+	return out
 }
 
-// ensures the slice is of the correct length and type.
-func castToProofsArray(as []marshal.Primitive) ([params.StatParam]*big.Int, error) {
-	if len(as) != params.StatParam {
-		return [params.StatParam]*big.Int{}, errors.New("invalid length")
+func (p *Proof) makeBuffers() {
+	for i := range p.As {
+		p.As[i] = new(big.Int)
 	}
-
-	res := [params.StatParam]*big.Int{}
-	for i, v := range as {
-		b, ok := v.(*marshal.BigInt)
-		if !ok {
-			return [params.StatParam]*big.Int{}, errors.New("type assertion failed")
-		}
-		res[i] = (*big.Int)(b)
+	for i := range p.Zs {
+		p.Zs[i] = new(big.Int)
 	}
-
-	return res, nil
 }

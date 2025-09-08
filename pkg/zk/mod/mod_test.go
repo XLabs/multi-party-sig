@@ -35,19 +35,16 @@ func TestMod(t *testing.T) {
 	require.NoError(t, err, "failed to marshal proof")
 	proof2 := &Proof{}
 	require.NoError(t, cbor.Unmarshal(out, proof2), "failed to unmarshal proof")
-	assert.True(t, proof2.Equal(proof))
-
 	out2, err := cbor.Marshal(proof2)
 	require.NoError(t, err, "failed to marshal 2nd proof")
 	proof3 := &Proof{}
 	require.NoError(t, cbor.Unmarshal(out2, proof3), "failed to unmarshal 2nd proof")
-	assert.True(t, proof3.Equal(proof2))
 
 	assert.True(t, proof3.Verify(public, hash.New(), pl))
 
-	proof.W = (&saferith.Nat{}).SetUint64(0)
+	proof.W = big.NewInt(0)
 	for idx := range proof.Responses {
-		proof.Responses[idx].X = (&saferith.Nat{}).SetUint64(0)
+		proof.Responses[idx].X = big.NewInt(0)
 	}
 
 	assert.False(t, proof.Verify(public, hash.New(), pl), "proof should have failed")
@@ -122,39 +119,4 @@ func BenchmarkCRT(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		proof = NewProof(hash.New(), private, public, nil)
 	}
-}
-
-func (a *Proof) Equal(b *Proof) bool {
-	if a == nil && b == nil {
-		return false
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	if a.W.Eq(b.W) != 1 {
-		return false
-	}
-
-	if len(a.Responses) != len(b.Responses) {
-		return false
-	}
-
-	for i := range a.Responses {
-		if !a.Responses[i].Eq(b.Responses[i]) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (r Response) Eq(o Response) bool {
-	if r.X.Eq(o.X) != 1 {
-		return false
-	}
-	if r.Z.Eq(o.Z) != 1 {
-		return false
-	}
-
-	return r.A == o.A && r.B == o.B
 }

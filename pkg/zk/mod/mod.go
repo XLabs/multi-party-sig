@@ -32,13 +32,13 @@ type Response struct {
 	// A, B s.t. y' = (-1)ᵃ wᵇ y
 	A, B bool
 	// X = y' ^ {1/4}
-	X *saferith.Nat
+	X *big.Int
 	// Z = y^{N⁻¹ mod ϕ(N)}
-	Z *saferith.Nat
+	Z *big.Int
 }
 
 type Proof struct {
-	W         *saferith.Nat
+	W         *big.Int
 	Responses [params.StatParam]Response
 }
 
@@ -127,21 +127,17 @@ func (p *Proof) IsValid(public Public) bool {
 	if p == nil {
 		return false
 	}
-	w := p.W.Big()
 
 	N := public.N.Big()
-	if big.Jacobi(w, N) != -1 {
+	if big.Jacobi(p.W, N) != -1 {
 		return false
 	}
 
-	if !arith.IsValidBigModN(N, w) {
+	if !arith.IsValidBigModN(N, p.W) {
 		return false
 	}
 	for _, r := range p.Responses {
-		x := r.X.Big()
-		z := r.Z.Big()
-
-		if !arith.IsValidBigModN(N, x, z) {
+		if !arith.IsValidBigModN(N, r.X, r.Z) {
 			return false
 		}
 	}
@@ -191,15 +187,15 @@ func NewProof(hash *hash.Hash, private Private, public Public, pl *pool.Pool) *P
 		rs[i] = Response{
 			A: a,
 			B: b,
-			X: x,
-			Z: z,
+			X: x.Big(),
+			Z: z.Big(),
 		}
 
 		return nil
 	})
 
 	return &Proof{
-		W:         w,
+		W:         w.Big(),
 		Responses: rs,
 	}
 }
@@ -207,16 +203,14 @@ func NewProof(hash *hash.Hash, private Private, public Public, pl *pool.Pool) *P
 func (r *Response) Verify(n, w, y *big.Int) bool {
 	var lhs, rhs big.Int
 
-	z := r.Z.Big()
 	// lhs = zⁿ mod n
-	lhs.Exp(z, n, n)
+	lhs.Exp(r.Z, n, n)
 	if lhs.Cmp(y) != 0 {
 		return false
 	}
 
-	x := r.X.Big()
 	// lhs = x⁴ (mod n)
-	lhs.Mul(x, x)
+	lhs.Mul(r.X, r.X)
 	lhs.Mul(&lhs, &lhs)
 	lhs.Mod(&lhs, n)
 
@@ -244,23 +238,21 @@ func (p *Proof) Verify(public Public, hash *hash.Hash, pl *pool.Pool) bool {
 		return false
 	}
 
-	w := p.W.Big()
-
-	if big.Jacobi(w, n) != -1 {
+	if big.Jacobi(p.W, n) != -1 {
 		return false
 	}
 
-	if !arith.IsValidBigModN(n, w) {
+	if !arith.IsValidBigModN(n, p.W) {
 		return false
 	}
 
 	// get [yᵢ] <- ℤₙ
-	ys, err := challenge(hash, nMod, w)
+	ys, err := challenge(hash, nMod, p.W)
 	if err != nil {
 		return false
 	}
 	verifications := pl.Parallelize(params.StatParam, func(i int) interface{} {
-		return p.Responses[i].Verify(n, w, ys[i].Big())
+		return p.Responses[i].Verify(n, p.W, ys[i].Big())
 	})
 	for i := 0; i < len(verifications); i++ {
 		if !verifications[i].(bool) {
@@ -291,7 +283,8 @@ func (r *Response) MarshalBinary() ([]byte, error) {
 	}
 
 	buf := new(bytes.Buffer)
-	marshal.WritePrimitives(buf, r.X, r.Z)
+
+	marshal.WritePrimitives(buf, (*marshal.BigInt)(r.X), (*marshal.BigInt)(r.Z))
 
 	var ab byte
 	if r.A {
@@ -312,10 +305,10 @@ func (r *Response) UnmarshalBinary(data []byte) ([]byte, error) {
 		return nil, errInvalidResp
 	}
 
-	r.X = new(saferith.Nat)
-	r.Z = new(saferith.Nat)
+	r.X = new(big.Int)
+	r.Z = new(big.Int)
 
-	data, err := marshal.ReadPrimitives(data, r.X, r.Z)
+	data, err := marshal.ReadPrimitives(data, (*marshal.BigInt)(r.X), (*marshal.BigInt)(r.Z))
 	if err != nil {
 		return nil, err
 	}
@@ -334,8 +327,9 @@ func (p *Proof) MarshalBinary() ([]byte, error) {
 	if p == nil || p.W == nil {
 		return nil, errInvalidProof
 	}
+
 	buf := bytes.NewBuffer(nil)
-	marshal.WritePrimitives(buf, p.W)
+	marshal.WritePrimitives(buf, (*marshal.BigInt)(p.W))
 
 	data, err := p.Responses[0].MarshalBinary()
 	if err != nil {
@@ -362,9 +356,9 @@ func (p *Proof) UnmarshalBinary(data []byte) error {
 		return errInvalidProof
 	}
 
-	p.W = new(saferith.Nat)
+	p.W = new(big.Int)
 
-	data, err := marshal.ReadPrimitives(data, p.W)
+	data, err := marshal.ReadPrimitives(data, (*marshal.BigInt)(p.W))
 	if err != nil {
 		return err
 	}
