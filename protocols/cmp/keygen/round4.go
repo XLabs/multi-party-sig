@@ -227,6 +227,12 @@ func (round4) BroadcastContent() round.BroadcastContent {
 func (round4) Number() round.Number { return 4 }
 
 func (r *round4) CanFinalize() bool {
+	t := r.Threshold() + 1
+
+	if len(r.validPrms) < t || len(r.validMod) < t || len(r.ShareReceived) < t {
+		return false
+	}
+
 	// should ensure each party sent validMod and validPrms
 	for _, p := range r.PartyIDs() {
 		if !r.validMod[p] || !r.validPrms[p] {

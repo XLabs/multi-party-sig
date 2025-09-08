@@ -61,6 +61,11 @@ func (r *round5) Finalize(chan<- common.ParsedMessage) (round.Session, error) {
 }
 
 func (r *round5) CanFinalize() bool {
+	t := r.Threshold() + 1
+	if len(r.validSchnorrResp) < t {
+		return false
+	}
+
 	// should ensure each party sent validSchnorrResp
 	for _, p := range r.PartyIDs() {
 		if !r.validSchnorrResp[p] {
