@@ -14,11 +14,29 @@ var (
 	errNilItem         = errors.New("nil item found")
 )
 
+/*
+Primitive represents a type that can be marshaled and unmarshaled in a ZK proof.
+
+It is similar to encoding.BinaryMarshaler and encoding.BinaryUnmarshaler,
+but also requires an AnnouncedLen method, which returns the expected
+maximum byte size of the MarshalBinary output.
+
+This is used to ensure that the sizes of each item can be encoded as uint16,
+which is important for keeping the overall proof size small.
+*/
+type Primitive interface {
+	encoding.BinaryMarshaler
+	encoding.BinaryUnmarshaler
+	// returns the expected max byte size of MarshalBinary output.
+	// returns -1 for error.
+	AnnouncedLen() int
+}
+
 // Since ZK proofs use relatively little memory, we store their numbers in uint16.
 
 // WritePrimitives writes uint16 sizes for each item, then marshal
 // each item and appends it to the buffer.
-func WritePrimitives(buf *bytes.Buffer, toMarshal ...encoding.BinaryMarshaler) error {
+func WritePrimitives(buf *bytes.Buffer, toMarshal ...Primitive) error {
 	items := make([][]byte, len(toMarshal))
 	totalLength := 0
 
@@ -26,13 +44,17 @@ func WritePrimitives(buf *bytes.Buffer, toMarshal ...encoding.BinaryMarshaler) e
 		if item == nil {
 			return errNilItem
 		}
+		announcedLen := item.AnnouncedLen()
+		if announcedLen > math.MaxUint16 {
+			return ErrSizeOverflow
+		}
+		if announcedLen <= 0 {
+			return errors.New("item has non-positive announced length")
+		}
+
 		b, err := item.MarshalBinary()
 		if err != nil {
 			return err
-		}
-
-		if len(b) > math.MaxUint16 {
-			return ErrSizeOverflow
 		}
 
 		items[i] = b
@@ -80,7 +102,7 @@ func readUint16Sizes(numItems int, data []byte) ([]int, []byte, error) {
 	return sizes, data, nil
 }
 
-func ReadPrimitives(data []byte, toUnmarshal ...encoding.BinaryUnmarshaler) ([]byte, error) {
+func ReadPrimitives(data []byte, toUnmarshal ...Primitive) ([]byte, error) {
 	sizes, data, err := readUint16Sizes(len(toUnmarshal), data)
 	if err != nil {
 		return nil, err

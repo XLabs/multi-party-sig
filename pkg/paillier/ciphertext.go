@@ -84,6 +84,10 @@ func (ct *Ciphertext) MarshalBinary() ([]byte, error) {
 	return ct.c.MarshalBinary()
 }
 
+func (ct *Ciphertext) AnnouncedLen() int {
+	return ct.c.AnnouncedLen()
+}
+
 func (ct *Ciphertext) UnmarshalBinary(data []byte) error {
 	ct.c = new(saferith.Nat)
 	return ct.c.UnmarshalBinary(data)
