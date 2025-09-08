@@ -51,7 +51,7 @@ func WritePrimitives(buf *bytes.Buffer, toMarshal ...Primitive) error {
 		switch {
 		case announcedLen < 0:
 			return errNonPositiveAnnouncedLen
-		case announcedLen > math.MaxInt32-totalLength:
+		case announcedLen > math.MaxUint16:
 			return ErrSizeOverflow
 		}
 
