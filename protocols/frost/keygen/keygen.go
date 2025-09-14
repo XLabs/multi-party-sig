@@ -35,8 +35,19 @@ func StartKeygenCommon(taproot bool, group curve.Curve, participants []party.ID,
 			Group:            group,
 			TrackingID:       &common.TrackingID{},
 		}
+
 		if err := info.TrackingID.FromString(string(sessionID)); err != nil {
 			return nil, fmt.Errorf("keygen.Start: %w", err)
+		}
+
+		if threshold < 1 {
+			return nil, fmt.Errorf("threshold must be at least 1")
+		}
+
+		if threshold >= len(participants) {
+			// since threshold+1 is the number of participants needed to make a signature together,
+			// we need to ensure that threshold < len(participants).
+			return nil, fmt.Errorf("threshold cannot be greater or equal to the number of participants")
 		}
 
 		if taproot {
