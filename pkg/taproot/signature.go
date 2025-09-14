@@ -58,20 +58,24 @@ func (s SecretKey) Public() (PublicKey, error) {
 }
 
 // GenKey generates a new key-pair, from a source of randomness.
-//
-// Errors returned by this function will only come from the reader. If you know
-// that the reader will never return errors, you can rest assured that this
-// function won't either.
 func GenKey(rand io.Reader) (SecretKey, PublicKey, error) {
-	for {
+	for range 50 {
 		secret := SecretKey(make([]byte, SecretKeyLength))
 		if _, err := io.ReadFull(rand, secret); err != nil {
 			return nil, nil, err
 		}
-		if public, err := secret.Public(); err == nil {
-			return secret, public, nil
+
+		public, err := secret.Public()
+		if err != nil {
+			continue // try again
 		}
+
+		// Successfully generated a valid key pair.
+		return secret, public, nil
 	}
+
+	// this is highly unlikely.
+	return nil, nil, fmt.Errorf("failed to generate key pair")
 }
 
 // SignatureLen is the number of bytes in a Signature.
