@@ -142,6 +142,10 @@ func (s *Signature) UnmarshalBinary(curve curve.Curve, bts []byte) error {
 		return fmt.Errorf("cannot unmarshal into nil Signature")
 	}
 
+	if curve == nil {
+		return fmt.Errorf("cannot unmarshal Signature with nil curve")
+	}
+
 	sclarSize := curve.ScalarBinarySize()
 	pntSize := curve.PointBinarySize()
 	if len(bts) < sclarSize+pntSize {
