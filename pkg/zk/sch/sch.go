@@ -37,6 +37,10 @@ func NewProof(hash *hash.Hash, public curve.Point, private curve.Scalar, gen cur
 
 	a := NewRandomness(rand.Reader, group, gen)
 	z := a.Prove(hash, public, private, gen)
+	if z == nil {
+		return EmptyProof(group) // empty proof is considered invalid.
+	}
+
 	return &Proof{
 		C: *a.Commitment(),
 		Z: *z,
@@ -57,7 +61,7 @@ func NewRandomness(rand io.Reader, group curve.Curve, gen curve.Point) *Randomne
 }
 
 func challenge(hash *hash.Hash, group curve.Curve, commitment *Commitment, public, gen curve.Point) (e curve.Scalar, err error) {
-	err = hash.WriteAny(commitment.C, public, gen)
+	err = hash.WriteAny(commitment, public, gen)
 	e = sample.Scalar(hash.Digest(), group)
 	return
 }
