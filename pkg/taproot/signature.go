@@ -1,8 +1,8 @@
 package taproot
 
 import (
-	"bytes"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -206,5 +206,7 @@ func (pk PublicKey) Verify(sig Signature, m []byte) bool {
 	if !check.HasEvenY() {
 		return false
 	}
-	return bytes.Equal(check.XBytes(), sig[:32])
+
+	//Secp256k1Point.XBytes return 32 bytes.
+	return subtle.ConstantTimeCompare(check.XBytes(), sig[:32]) == 1
 }

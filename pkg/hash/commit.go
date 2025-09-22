@@ -1,8 +1,8 @@
 package hash
 
 import (
-	"bytes"
 	"crypto/rand"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"io"
@@ -115,5 +115,6 @@ func (hash *Hash) Decommit(c Commitment, d Decommitment, data ...interface{}) bo
 
 	computedCommitment := h.Sum()
 
-	return bytes.Equal(computedCommitment, c)
+	// the computed commitment has constant and similar length.
+	return subtle.ConstantTimeCompare(computedCommitment, c) == 1
 }

@@ -2,6 +2,7 @@ package sign
 
 import (
 	"bytes"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -236,11 +237,12 @@ func (sig Signature) Verify(public curve.Point, m []byte) error {
 		return err
 	}
 
-	if r != actualAddress {
+	// both are 20 bytes. Use constant time comparison.
+	if subtle.ConstantTimeCompare(r[:], actualAddress[:]) != 1 {
 		return fmt.Errorf("signature verification failed: %x != %x", r, actualAddress)
 	}
 
-	return nil //actual.Equal(sig.R)
+	return nil
 }
 
 // this function is responsible for creating the challegne scalar for schnorr signatures.
