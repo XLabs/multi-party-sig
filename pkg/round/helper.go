@@ -44,7 +44,7 @@ type Helper struct {
 // `auxInfo` is a variable list of objects which should be included in the session's hash state.
 func NewSession(info Info, sessionID []byte, pl *pool.Pool, auxInfo ...hash.WriterToWithDomain) (*Helper, error) {
 	partyIDs := party.NewIDSlice(info.PartyIDs)
-	if !partyIDs.Valid() {
+	if !partyIDs.Valid(info.Group) {
 		return nil, errors.New("session: partyIDs invalid")
 	}
 

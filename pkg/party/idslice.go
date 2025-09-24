@@ -5,6 +5,8 @@ import (
 	"io"
 	"sort"
 	"strings"
+
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 )
 
 type IDSlice []ID
@@ -28,14 +30,30 @@ func (partyIDs IDSlice) Contains(ids ...ID) bool {
 }
 
 // Valid returns true if the IDSlice is sorted and does not contain any duplicates.
-func (partyIDs IDSlice) Valid() bool {
+func (partyIDs IDSlice) Valid(group curve.Curve) bool {
 	n := len(partyIDs)
 	for i := 1; i < n; i++ {
 		if partyIDs[i-1] >= partyIDs[i] {
 			return false
 		}
 	}
-	return true
+
+	if group == nil {
+		return true
+	}
+
+	// ensure that all IDs translate into different scalars.
+	mp := make(map[string]struct{}, len(partyIDs))
+	for _, pid := range partyIDs {
+		scalar := pid.Scalar(group)
+		bts, err := group.MarshalScalar(scalar)
+		if err != nil {
+			return false
+		}
+		mp[string(bts)] = struct{}{}
+	}
+
+	return len(mp) == len(partyIDs)
 }
 
 // Copy returns an identical copy of the received.
