@@ -94,7 +94,20 @@ func (z *Response) Verify(hash *hash.Hash, public curve.Point, commitment *Commi
 	if gen == nil {
 		gen = public.Curve().NewBasePoint()
 	}
-	if z == nil || !z.IsValid() || public.IsIdentity() {
+
+	if z == nil || !z.IsValid() {
+		return false
+	}
+
+	if commitment == nil || commitment.C == nil || commitment.C.IsIdentity() || !z.group.Equal(commitment.C.Curve()) {
+		return false
+	}
+
+	if public == nil || public.IsIdentity() || !z.group.Equal(public.Curve()) {
+		return false
+	}
+
+	if !z.group.Equal(gen.Curve()) {
 		return false
 	}
 

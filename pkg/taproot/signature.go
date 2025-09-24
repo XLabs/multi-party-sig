@@ -43,6 +43,8 @@ type SecretKey []byte
 // This is simply an array of 32 bytes.
 type PublicKey []byte
 
+const publicKeyLength = 32
+
 // Public calculates the public key corresponding to a given secret key.
 //
 // This will return an error if the secret key is invalid.
@@ -182,15 +184,22 @@ func (pk PublicKey) Verify(sig Signature, m []byte) bool {
 	if len(sig) != SignatureLen {
 		return false
 	}
+	c := curve.Secp256k1{}
+	if len(pk) != publicKeyLength {
+		return false
+	}
 
-	P, err := curve.Secp256k1{}.LiftX(pk)
+	P, err := c.LiftX(pk)
 	if err != nil {
 		return false
 	}
-	s := new(curve.Secp256k1Scalar)
-	if err := s.UnmarshalBinary(sig[32:]); err != nil {
+
+	// unmarshal ensures valid scalar. otherwise err != nil.
+	s, err := c.UnmarshalScalar(sig[32:])
+	if err != nil {
 		return false
 	}
+
 	eHash := TaggedHash("BIP0340/challenge", sig[:32], pk, m)
 	e := new(curve.Secp256k1Scalar)
 	_ = e.UnmarshalBinary(eHash)
