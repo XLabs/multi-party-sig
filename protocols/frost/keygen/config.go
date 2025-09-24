@@ -39,15 +39,12 @@ type Config struct {
 
 // inspects the basic validity of the config
 func (r *Config) ValidateBasic() bool {
-	base := r != nil &&
-		r.ID != "" &&
-		r.Threshold > 0 &&
-		r.PrivateShare != nil &&
-		r.PublicKey != nil &&
-		// r.ChainKey != nil && // ChainKey can be nil
-		r.VerificationShares != nil
-
-	if !base {
+	if r == nil ||
+		r.ID == "" ||
+		r.Threshold <= 0 ||
+		r.PrivateShare == nil ||
+		r.PublicKey == nil ||
+		r.VerificationShares == nil {
 		return false
 	}
 

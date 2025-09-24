@@ -59,19 +59,17 @@ func (s SecretKey) Public() (PublicKey, error) {
 
 // GenKey generates a new key-pair, from a source of randomness.
 func GenKey(rand io.Reader) (SecretKey, PublicKey, error) {
-	for range 50 {
+	for range 128 {
 		secret := SecretKey(make([]byte, SecretKeyLength))
 		if _, err := io.ReadFull(rand, secret); err != nil {
 			return nil, nil, err
 		}
 
 		public, err := secret.Public()
-		if err != nil {
-			continue // try again
+		if err == nil {
+			// Successfully generated a valid key pair.
+			return secret, public, nil
 		}
-
-		// Successfully generated a valid key pair.
-		return secret, public, nil
 	}
 
 	// this is highly unlikely.
