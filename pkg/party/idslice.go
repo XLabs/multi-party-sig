@@ -43,17 +43,21 @@ func (partyIDs IDSlice) Valid(group curve.Curve) bool {
 	}
 
 	// ensure that all IDs translate into different scalars.
-	mp := make(map[string]struct{}, len(partyIDs))
-	for _, pid := range partyIDs {
-		scalar := pid.Scalar(group)
-		bts, err := group.MarshalScalar(scalar)
-		if err != nil {
-			return false
-		}
-		mp[string(bts)] = struct{}{}
+	sclrs := make([]curve.Scalar, len(partyIDs))
+	for i, pid := range partyIDs {
+		sclrs[i] = pid.Scalar(group)
 	}
 
-	return len(mp) == len(partyIDs)
+	// check for duplicates.
+	for i := range sclrs {
+		for j := i + 1; j < len(sclrs); j++ {
+			if sclrs[i].Equal(sclrs[j]) {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 // Copy returns an identical copy of the received.
