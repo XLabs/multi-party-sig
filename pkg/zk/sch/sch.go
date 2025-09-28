@@ -2,6 +2,7 @@ package zksch
 
 import (
 	"crypto/rand"
+	"errors"
 	"io"
 
 	"github.com/xlabs/multi-party-sig/pkg/hash"
@@ -31,20 +32,22 @@ type Proof struct {
 	Z Response
 }
 
+var errProveFail = errors.New("failed to create schnorr proof")
+
 // NewProof generates a Schnorr proof of knowledge of exponent for public, using the Fiat-Shamir transform.
-func NewProof(hash *hash.Hash, public curve.Point, private curve.Scalar, gen curve.Point) *Proof {
+func NewProof(hash *hash.Hash, public curve.Point, private curve.Scalar, gen curve.Point) (*Proof, error) {
 	group := private.Curve()
 
 	a := NewRandomness(rand.Reader, group, gen)
 	z := a.Prove(hash, public, private, gen)
 	if z == nil {
-		return EmptyProof(group) // empty proof is considered invalid.
+		return nil, errProveFail
 	}
 
 	return &Proof{
 		C: *a.Commitment(),
 		Z: *z,
-	}
+	}, nil
 }
 
 // NewRandomness creates a new a ∈ ℤₚ and the corresponding commitment C = a•G.
