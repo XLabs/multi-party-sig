@@ -59,9 +59,11 @@ func (s SecretKey) Public() (PublicKey, error) {
 	return PublicKey(point.XBytes()), nil
 }
 
+const numKeyGenTries = 128
+
 // GenKey generates a new key-pair, from a source of randomness.
 func GenKey(rand io.Reader) (SecretKey, PublicKey, error) {
-	for range 128 {
+	for range numKeyGenTries {
 		secret := SecretKey(make([]byte, SecretKeyLength))
 		if _, err := io.ReadFull(rand, secret); err != nil {
 			return nil, nil, err
