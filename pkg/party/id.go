@@ -96,7 +96,7 @@ func (m *PointMap) MarshalBinary() ([]byte, error) {
 
 	pointBytes := make(map[ID]cbor.RawMessage, len(m.Points))
 	var err error
-	for k, v := range m.Points { // TODO: should I change this to avoid using cbor altogether?
+	for k, v := range m.Points {
 		pointBytes[k], err = cbor.Marshal(v)
 		if err != nil {
 			return nil, err
