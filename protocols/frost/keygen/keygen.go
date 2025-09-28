@@ -2,6 +2,7 @@ package keygen
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
@@ -62,9 +63,7 @@ func StartKeygenCommon(taproot bool, group curve.Curve, participants []party.ID,
 		}
 
 		verificationSharesCopy := make(map[party.ID]curve.Point, len(participants))
-		for k, v := range verificationShares {
-			verificationSharesCopy[k] = v
-		}
+		maps.Copy(verificationSharesCopy, verificationShares)
 
 		refresh := true
 		if privateShare == nil || publicKey == nil {

@@ -50,13 +50,18 @@ func NewProof(hash *hash.Hash, public curve.Point, private curve.Scalar, gen cur
 // NewRandomness creates a new a ∈ ℤₚ and the corresponding commitment C = a•G.
 // This can be used to run the proof in a non-interactive way.
 func NewRandomness(rand io.Reader, group curve.Curve, gen curve.Point) *Randomness {
-	if gen == nil {
-		gen = group.NewBasePoint()
-	}
 	a := sample.Scalar(rand, group)
+
+	var c curve.Point
+	if gen == nil {
+		c = a.ActOnBase()
+	} else {
+		c = a.Act(gen)
+	}
+
 	return &Randomness{
 		a:          a,
-		commitment: Commitment{C: a.Act(gen)},
+		commitment: Commitment{C: c},
 	}
 }
 
