@@ -184,11 +184,15 @@ func EmptyExponent(group curve.Curve) *Exponent {
 
 var (
 	errNoGroup         = errors.New("can't unmarshal Exponent with no group")
-	dataSizeIncorrect  = errors.New("data size is incorrect")
+	errIncorrectSize   = errors.New("data size is incorrect")
 	errSizeNotPositive = errors.New("size must be positive")
+	errNilExponent     = errors.New("can't marshal nil Exponent")
 )
 
 func (e *Exponent) MarshalBinary() ([]byte, error) {
+	if e == nil {
+		return nil, errNilExponent
+	}
 	if e.group == nil {
 		return nil, errNoGroup
 	}
@@ -228,7 +232,7 @@ func UnmarshalBinary(group curve.Curve, size int, data []byte) (*Exponent, error
 	pointSize := group.PointBinarySize()
 
 	if len(data) != 1+size*pointSize {
-		return nil, dataSizeIncorrect
+		return nil, errIncorrectSize
 	}
 
 	p := &Exponent{

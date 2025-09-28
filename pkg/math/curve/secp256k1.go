@@ -23,6 +23,16 @@ func init() {
 
 type Secp256k1 struct{}
 
+func (Secp256k1) Equal(other Curve) bool {
+	if other == nil {
+		return false
+	}
+
+	_, ok := other.(Secp256k1)
+
+	return ok
+}
+
 func (Secp256k1) NewPoint() Point {
 	return new(Secp256k1Point)
 }
@@ -153,15 +163,16 @@ func (s *Secp256k1Scalar) UnmarshalBinary(data []byte) error {
 		return errNilScalar
 	}
 
-	if len(data) < scalarBinarySize {
+	if len(data) != scalarBinarySize {
 		return fmt.Errorf("invalid length for secp256k1 scalar: %d", len(data))
 	}
 
 	var exactData [scalarBinarySize]byte
 	copy(exactData[:], data)
-	if s.value.SetBytes(&exactData) != 0 {
+	if s.value.SetBytes(&exactData) != 0 { // non-zero means overflow, i.e. not a valid scalar
 		return errors.New("invalid bytes for secp256k1 scalar")
 	}
+
 	return nil
 }
 
@@ -291,15 +302,18 @@ func (p *Secp256k1Point) UnmarshalBinary(data []byte) error {
 		return errNilPoint
 	}
 
-	if len(data) < pointBinarySize {
+	if len(data) != pointBinarySize {
 		return fmt.Errorf("invalid length for secp256k1Point: %d", len(data))
 	}
 
 	p.value.Z.SetInt(1)
+
+	// setByteSlice returns true on overflow. Stating bad scalar.
 	if p.value.X.SetByteSlice(data[1:]) {
 		return fmt.Errorf("secp256k1Point.UnmarshalBinary: x coordinate out of range")
 	}
 
+	// decompressY returns false on failure
 	if !secp256k1.DecompressY(&p.value.X, data[0] == 3, &p.value.Y) {
 		return fmt.Errorf("secp256k1Point.UnmarshalBinary: x coordinate not on curve")
 	}

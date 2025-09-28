@@ -43,3 +43,8 @@ func TestSchFail(t *testing.T) {
 	proof := a.Prove(hash.New(), X, x, nil)
 	assert.False(t, proof.Verify(hash.New(), X, a.Commitment(), nil), "proof should not accept identity point")
 }
+
+func TestEmptyProofIsInvalid(t *testing.T) {
+	empty := EmptyProof(curve.Secp256k1{})
+	assert.False(t, empty.IsValid())
+}

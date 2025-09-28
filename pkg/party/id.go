@@ -82,6 +82,18 @@ func EmptyPointMap(group curve.Curve) *PointMap {
 }
 
 func (m *PointMap) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, errors.New("PointMap.MarshalBinary called on nil PointMap")
+	}
+
+	if m.group == nil {
+		return nil, errors.New("PointMap.MarshalBinary called without setting a group")
+	}
+
+	if len(m.Points) == 0 {
+		return nil, errors.New("PointMap.MarshalBinary called on empty PointMap")
+	}
+
 	pointBytes := make(map[ID]cbor.RawMessage, len(m.Points))
 	var err error
 	for k, v := range m.Points {
@@ -94,13 +106,19 @@ func (m *PointMap) MarshalBinary() ([]byte, error) {
 }
 
 func (m *PointMap) UnmarshalBinary(data []byte) error {
+	if m == nil {
+		return errors.New("PointMap.UnmarshalBinary called on nil PointMap")
+	}
+
 	if m.group == nil {
 		return errors.New("PointMap.UnmarshalBinary called without setting a group")
 	}
+
 	pointBytes := make(map[ID]cbor.RawMessage)
 	if err := cbor.Unmarshal(data, &pointBytes); err != nil {
 		return err
 	}
+
 	m.Points = make(map[ID]curve.Point, len(pointBytes))
 	for k, v := range pointBytes {
 		point := m.group.NewPoint()

@@ -48,6 +48,9 @@ type Curve interface {
 	// Order returns a Modulus holding order of this group.
 	Order() *saferith.Modulus
 
+	// Same checks if two curves are the same.
+	Equal(Curve) bool
+
 	scalarMarshaller
 	pointMarshaller
 }

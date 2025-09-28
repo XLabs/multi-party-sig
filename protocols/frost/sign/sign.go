@@ -20,6 +20,10 @@ const (
 
 func StartSignCommon(taproot bool, result *keygen.Config, signers []party.ID, messageHash []byte) protocol.StartFunc {
 	return func(sessionID []byte) (round.Session, error) {
+		if !result.ValidateBasic() {
+			return nil, fmt.Errorf("invalid keygen result")
+		}
+
 		info := round.Info{
 			FinalRoundNumber: protocolRounds,
 			SelfID:           result.ID,

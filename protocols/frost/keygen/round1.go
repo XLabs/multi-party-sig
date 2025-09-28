@@ -99,10 +99,13 @@ func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	// At this point, we've already hashed context inside of helper, so we just
 	// add in our own ID, and then we're good to go.
 
-	// Refresh: Don't create a proof.
 	var Sigma_i *zksch.Proof
-	if !r.refresh {
-		Sigma_i = zksch.NewProof(r.Helper.HashForID(r.SelfID()), a_i0_times_G, a_i0, nil)
+	if !r.refresh { // Refresh: Don't create a proof.
+		tmp, err := zksch.NewProof(r.Helper.HashForID(r.SelfID()), a_i0_times_G, a_i0, nil)
+		if err != nil {
+			return r, fmt.Errorf("failed to create zk proof: %w", err)
+		}
+		Sigma_i = tmp
 	}
 
 	// 3. "Every participant Pᵢ computes a public comment Φᵢ = <ϕᵢ₀, ..., ϕᵢₜ>
