@@ -1,9 +1,7 @@
 package zkprm
 
 import (
-	"bytes"
 	"crypto/rand"
-	"errors"
 	"io"
 	"math/big"
 
@@ -14,7 +12,6 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
 	"github.com/xlabs/multi-party-sig/pkg/pool"
-	"github.com/xlabs/multi-party-sig/pkg/zk/marshal"
 )
 
 type Public struct {
@@ -148,64 +145,4 @@ func challenge(hash *hash.Hash, public Public, A [params.StatParam]*big.Int) (es
 	}
 
 	return
-}
-
-func (p *Proof) MarshalBinary() (data []byte, err error) {
-	prims := make([]marshal.Primitive, len(p.As))
-	for i := range p.As {
-		prims[i] = (*marshal.BigInt)(p.As[i])
-	}
-
-	bf := bytes.NewBuffer(nil)
-	if err := marshal.WritePrimitives(bf, prims...); err != nil {
-		return nil, err
-	}
-	prims = make([]marshal.Primitive, len(p.Zs))
-	for i := range p.Zs {
-		prims[i] = (*marshal.BigInt)(p.Zs[i])
-	}
-	if err := marshal.WritePrimitives(bf, prims...); err != nil {
-		return nil, err
-	}
-
-	return bf.Bytes(), nil
-}
-
-func (p *Proof) UnmarshalBinary(data []byte) error {
-	if p == nil {
-		return errors.New("nil prm proof")
-	}
-
-	p.makeBuffers()
-
-	rest, err := marshal.ReadPrimitives(data, intoPrimBuffer(p.As[:])...)
-	if err != nil {
-		return err
-	}
-
-	_, err = marshal.ReadPrimitives(rest, intoPrimBuffer(p.Zs[:])...)
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
-// converts a slice of *big.Int to a slice of marshal.Primitive
-func intoPrimBuffer(in []*big.Int) []marshal.Primitive {
-	out := make([]marshal.Primitive, len(in))
-	for i := range in {
-		out[i] = (*marshal.BigInt)(in[i])
-	}
-
-	return out
-}
-
-func (p *Proof) makeBuffers() {
-	for i := range p.As {
-		p.As[i] = new(big.Int)
-	}
-	for i := range p.Zs {
-		p.Zs[i] = new(big.Int)
-	}
 }

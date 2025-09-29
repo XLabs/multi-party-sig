@@ -1,16 +1,13 @@
 package zkfac
 
 import (
-	"bytes"
 	"crypto/rand"
-	"errors"
 
 	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
 	"github.com/xlabs/multi-party-sig/pkg/math/arith"
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
-	"github.com/xlabs/multi-party-sig/pkg/zk/marshal"
 )
 
 type Public struct {
@@ -151,78 +148,4 @@ func challenge(hash *hash.Hash, public Public, commitment Commitment) (*saferith
 	// be +-2^eps.
 	return sample.IntervalL(hash.Digest()), nil
 	// return sample.IntervalEps(hash.Digest()), nil
-}
-
-var (
-	errInvalidCommitment = errors.New("invalid fac commitment")
-	errInvalidProof      = errors.New("invalid fac proof")
-)
-
-func (c *Commitment) MarshalBinary() ([]byte, error) {
-	if c == nil || c.P == nil || c.Q == nil || c.A == nil || c.B == nil || c.T == nil {
-		return nil, errInvalidCommitment
-	}
-
-	buf := bytes.NewBuffer(nil)
-
-	if err := marshal.WritePrimitives(buf, c.P, c.Q, c.A, c.B, c.T); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
-func (c *Commitment) UnmarshalBinary(data []byte) ([]byte, error) {
-	if c == nil {
-		return nil, errInvalidCommitment
-	}
-
-	c.A = new(saferith.Nat)
-	c.B = new(saferith.Nat)
-	c.P = new(saferith.Nat)
-	c.Q = new(saferith.Nat)
-	c.T = new(saferith.Nat)
-
-	return marshal.ReadPrimitives(data, c.P, c.Q, c.A, c.B, c.T)
-}
-
-func (p *Proof) MarshalBinary() ([]byte, error) {
-	if p == nil || p.Sigma == nil || p.Z1 == nil || p.Z2 == nil || p.W1 == nil || p.W2 == nil || p.V == nil {
-		return nil, errInvalidProof
-	}
-
-	bts, err := p.Comm.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-
-	buf := bytes.NewBuffer(bts)
-
-	if err := marshal.WritePrimitives(buf, p.Sigma, p.Z1, p.Z2, p.W1, p.W2, p.V); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
-func (p *Proof) UnmarshalBinary(data []byte) error {
-	if p == nil {
-		return errInvalidProof
-	}
-
-	remaining, err := p.Comm.UnmarshalBinary(data)
-	if err != nil {
-		return err
-	}
-	data = remaining
-
-	p.Sigma = new(saferith.Int)
-	p.Z1 = new(saferith.Int)
-	p.Z2 = new(saferith.Int)
-	p.W1 = new(saferith.Int)
-	p.W2 = new(saferith.Int)
-	p.V = new(saferith.Int)
-
-	_, err = marshal.ReadPrimitives(data, p.Sigma, p.Z1, p.Z2, p.W1, p.W2, p.V)
-	return err
 }

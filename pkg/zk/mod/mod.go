@@ -1,9 +1,7 @@
 package zkmod
 
 import (
-	"bytes"
 	"crypto/rand"
-	"errors"
 	"math/big"
 
 	"github.com/cronokirby/saferith"
@@ -12,7 +10,6 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/arith"
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/pool"
-	"github.com/xlabs/multi-party-sig/pkg/zk/marshal"
 )
 
 type Public struct {
@@ -270,106 +267,4 @@ func challenge(hash *hash.Hash, n *saferith.Modulus, w *big.Int) (es []*saferith
 		es[i] = sample.ModN(digest, n)
 	}
 	return
-}
-
-var (
-	errInvalidResp  = errors.New("invalid zkmod response")
-	errInvalidProof = errors.New("invalid zkmod proof")
-)
-
-func (r *Response) MarshalBinary() ([]byte, error) {
-	if r == nil || r.X == nil || r.Z == nil {
-		return nil, errInvalidResp
-	}
-
-	buf := new(bytes.Buffer)
-
-	marshal.WritePrimitives(buf, (*marshal.BigInt)(r.X), (*marshal.BigInt)(r.Z))
-
-	var ab byte
-	if r.A {
-		ab |= 1
-	}
-	if r.B {
-		ab |= 2
-	}
-	if err := buf.WriteByte(ab); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
-func (r *Response) UnmarshalBinary(data []byte) ([]byte, error) {
-	if r == nil {
-		return nil, errInvalidResp
-	}
-
-	r.X = new(big.Int)
-	r.Z = new(big.Int)
-
-	data, err := marshal.ReadPrimitives(data, (*marshal.BigInt)(r.X), (*marshal.BigInt)(r.Z))
-	if err != nil {
-		return nil, err
-	}
-
-	if len(data) < 1 {
-		return nil, errInvalidResp
-	}
-	ab := data[0]
-	r.A = (ab & 1) != 0
-	r.B = (ab & 2) != 0
-
-	return data[1:], nil
-}
-
-func (p *Proof) MarshalBinary() ([]byte, error) {
-	if p == nil || p.W == nil {
-		return nil, errInvalidProof
-	}
-
-	buf := bytes.NewBuffer(nil)
-	marshal.WritePrimitives(buf, (*marshal.BigInt)(p.W))
-
-	data, err := p.Responses[0].MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	// Preallocate buffer for all responses
-	buf.Grow(len(data) * len(p.Responses))
-	buf.Write(data)
-
-	for i := 1; i < len(p.Responses); i++ {
-		data, err := p.Responses[i].MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
-
-		buf.Write(data)
-	}
-
-	return buf.Bytes(), nil
-}
-
-func (p *Proof) UnmarshalBinary(data []byte) error {
-	if p == nil {
-		return errInvalidProof
-	}
-
-	p.W = new(big.Int)
-
-	data, err := marshal.ReadPrimitives(data, (*marshal.BigInt)(p.W))
-	if err != nil {
-		return err
-	}
-
-	for i := range p.Responses {
-		rest, err := p.Responses[i].UnmarshalBinary(data)
-		if err != nil {
-			return err
-		}
-		data = rest
-	}
-
-	return nil
 }

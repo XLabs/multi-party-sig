@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/cronokirby/saferith"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xlabs/multi-party-sig/internal/marshal"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
 	"github.com/xlabs/multi-party-sig/pkg/math/arith"
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
@@ -31,14 +31,14 @@ func TestMod(t *testing.T) {
 	}, public, pl)
 	assert.True(t, proof.Verify(public, hash.New(), pl))
 
-	out, err := cbor.Marshal(proof)
+	out, err := marshal.Encode(proof)
 	require.NoError(t, err, "failed to marshal proof")
 	proof2 := &Proof{}
-	require.NoError(t, cbor.Unmarshal(out, proof2), "failed to unmarshal proof")
-	out2, err := cbor.Marshal(proof2)
+	require.NoError(t, marshal.Decode(out, proof2), "failed to unmarshal proof")
+	out2, err := marshal.Encode(proof2)
 	require.NoError(t, err, "failed to marshal 2nd proof")
 	proof3 := &Proof{}
-	require.NoError(t, cbor.Unmarshal(out2, proof3), "failed to unmarshal 2nd proof")
+	require.NoError(t, marshal.Decode(out2, proof3), "failed to unmarshal 2nd proof")
 
 	assert.True(t, proof3.Verify(public, hash.New(), pl))
 

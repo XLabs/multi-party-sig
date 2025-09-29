@@ -1,9 +1,7 @@
 package zklogstar
 
 import (
-	"bytes"
 	"crypto/rand"
-	"errors"
 
 	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
@@ -12,7 +10,6 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/paillier"
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
-	"github.com/xlabs/multi-party-sig/pkg/zk/marshal"
 )
 
 type Public struct {
@@ -183,100 +180,4 @@ func Empty(group curve.Curve) *Proof {
 		group:      group,
 		Commitment: &Commitment{Y: group.NewPoint()},
 	}
-}
-
-var (
-	errNilCommitment     = errors.New("nil logstar Commitment")
-	errInvalidCommitment = errors.New("invalid logstar Commitment")
-	errNilGroup          = errors.New("received nil Curve")
-	errNilProof          = errors.New("nil logstar Proof")
-	errInsufficientData  = errors.New("insufficient data to unmarshal logstar proof")
-)
-
-func (c *Commitment) MarshalBinary() ([]byte, error) {
-	if c == nil || c.A == nil || c.Y == nil || c.S == nil || c.D == nil {
-		return nil, errInvalidCommitment
-	}
-	var buf bytes.Buffer
-	if err := marshal.WritePrimitives(&buf, c.S, c.A, c.D); err != nil {
-		return nil, err
-	}
-
-	pt, err := c.Y.Curve().MarshalPoint(c.Y)
-	if err != nil {
-		return nil, err
-	}
-	buf.Write(pt)
-
-	return buf.Bytes(), nil
-}
-
-func (c *Commitment) UnmarshalBinary(data []byte, grp curve.Curve) ([]byte, error) {
-	if c == nil {
-		return nil, errNilCommitment
-	}
-
-	if grp == nil {
-		return nil, errNilGroup
-	}
-
-	c.S = new(saferith.Nat)
-	c.A = new(paillier.Ciphertext)
-	c.D = new(saferith.Nat)
-
-	data, err := marshal.ReadPrimitives(data, c.S, c.A, c.D)
-	if err != nil {
-		return nil, err
-	}
-
-	ptByteSize := grp.PointBinarySize()
-	if len(data) < ptByteSize {
-		return nil, errInsufficientData
-	}
-
-	if c.Y, err = grp.UnmarshalPoint(data[:ptByteSize]); err != nil {
-		return nil, err
-	}
-
-	return data[ptByteSize:], nil
-}
-
-func (p *Proof) MarshalBinary() ([]byte, error) {
-	if p == nil || p.Commitment == nil || p.Z3 == nil || p.Z2 == nil || p.Z1 == nil {
-		return nil, errNilProof
-	}
-
-	commbytes, err := p.Commitment.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	buf := bytes.NewBuffer(commbytes)
-
-	if err := marshal.WritePrimitives(buf, p.Z1, p.Z2, p.Z3); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
-func (p *Proof) UnmarshalBinary(data []byte) error {
-	if p == nil {
-		return errNilProof
-	}
-	if p.group == nil {
-		return errNilGroup
-	}
-
-	p.Commitment = new(Commitment)
-	data, err := p.Commitment.UnmarshalBinary(data, p.group)
-	if err != nil {
-		return err
-	}
-
-	p.Z1 = new(saferith.Int)
-	p.Z2 = new(saferith.Nat)
-	p.Z3 = new(saferith.Int)
-
-	_, err = marshal.ReadPrimitives(data, p.Z1, p.Z2, p.Z3)
-	return err
 }

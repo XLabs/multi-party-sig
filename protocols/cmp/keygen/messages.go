@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cronokirby/saferith"
+	"github.com/xlabs/multi-party-sig/internal/marshal"
 	"github.com/xlabs/multi-party-sig/internal/types"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
@@ -72,7 +73,7 @@ func makeBroadcast3(
 		return nil, err
 	}
 
-	schnorrCommitment, err := SchnorrCommitments.MarshalBinary()
+	schnorrCommitment, err := marshal.Encode(SchnorrCommitments)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +197,7 @@ func makeMessage4(
 		return nil, err
 	}
 
-	facBytes, err := fac.MarshalBinary()
+	facBytes, err := marshal.Encode(fac)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +235,7 @@ func (x *Message4) UnmarshalContent() (*paillier.Ciphertext, *zkfac.Proof, error
 	}
 
 	fac := &zkfac.Proof{}
-	if err := fac.UnmarshalBinary(x.Fac); err != nil {
+	if err := marshal.Decode(x.Fac, fac); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal Fac proof: %w", err)
 	}
 
@@ -247,12 +248,12 @@ func makeBroadcast4(
 	// Prm = zkprm.Proof
 	prm *zkprm.Proof,
 ) (round.Content, error) {
-	modBytes, err := mod.MarshalBinary()
+	modBytes, err := marshal.Encode(mod)
 	if err != nil {
 		return nil, err
 	}
 
-	prmBytes, err := prm.MarshalBinary()
+	prmBytes, err := marshal.Encode(prm)
 	if err != nil {
 		return nil, err
 	}
@@ -285,13 +286,12 @@ func (x *Broadcast4) ValidateBasic() bool {
 
 func (x *Broadcast4) UnmarshalContent() (*zkmod.Proof, *zkprm.Proof, error) {
 	mod := &zkmod.Proof{}
-	if err := mod.UnmarshalBinary(x.Mod); err != nil {
+	if err := marshal.Decode(x.Mod, mod); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal Mod proof: %w", err)
 	}
 
-	// TODO: Using cbor is unsafe. might cause panic due to demand of large buffer.
 	prm := &zkprm.Proof{}
-	if err := prm.UnmarshalBinary(x.Prm); err != nil {
+	if err := marshal.Decode(x.Prm, prm); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal Prm proof: %w", err)
 	}
 
@@ -309,8 +309,7 @@ func makeBroadcast5(
 	// SchnorrResponse is the Schnorr proof of knowledge of the new secret share
 	schnorrResponse *zksch.Response,
 ) (round.Content, error) {
-
-	rspBytes, err := schnorrResponse.MarshalBinary()
+	rspBytes, err := marshal.Encode(schnorrResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +340,7 @@ func (x *Broadcast5) ValidateBasic() bool {
 
 func (x *Broadcast5) UnmarshalContent(crv curve.Curve) (*zksch.Response, error) {
 	rsp := zksch.EmptyResponse(crv)
-	if err := rsp.UnmarshalBinary(x.SchnorrResponse); err != nil {
+	if err := marshal.Decode(x.SchnorrResponse, rsp); err != nil {
 		return nil, err
 	}
 

@@ -1,9 +1,7 @@
 package zkenc
 
 import (
-	"bytes"
 	"crypto/rand"
-	"errors"
 
 	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
@@ -12,7 +10,6 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"github.com/xlabs/multi-party-sig/pkg/paillier"
 	"github.com/xlabs/multi-party-sig/pkg/pedersen"
-	"github.com/xlabs/multi-party-sig/pkg/zk/marshal"
 )
 
 type Public struct {
@@ -140,76 +137,4 @@ func challenge(hash *hash.Hash, group curve.Curve, public Public, commitment *Co
 		commitment.S, commitment.A, commitment.C)
 	e = sample.IntervalScalar(hash.Digest(), group)
 	return
-}
-
-var (
-	errInvalidCommitment = errors.New("invalid commitment")
-	errInvalidProof      = errors.New("invalid proof")
-)
-
-func (c *Commitment) MarshalBinary() ([]byte, error) {
-	if c == nil || c.S == nil || c.A == nil || c.C == nil {
-		return nil, errInvalidCommitment
-	}
-
-	buf := bytes.NewBuffer(nil)
-
-	if err := marshal.WritePrimitives(buf, c.S, c.A, c.C); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
-// UnmarshalBinary unmarshals a Commitment from data and returns the remaining bytes.
-func (c *Commitment) UnmarshalBinary(data []byte) ([]byte, error) {
-	if c == nil {
-		return nil, errInvalidCommitment
-	}
-
-	c.S = new(saferith.Nat)
-	c.A = new(paillier.Ciphertext)
-	c.C = new(saferith.Nat)
-
-	return marshal.ReadPrimitives(data, c.S, c.A, c.C)
-}
-
-func (p *Proof) MarshalBinary() ([]byte, error) {
-	if p == nil || p.Z1 == nil || p.Z2 == nil || p.Z3 == nil || p.Commitment == nil {
-		return nil, errInvalidProof
-	}
-
-	commitmentBytes, err := p.Commitment.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-
-	buf := bytes.NewBuffer(commitmentBytes)
-
-	if err := marshal.WritePrimitives(buf, p.Z1, p.Z2, p.Z3); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
-// UnmarshalBinary unmarshals a Proof from data.
-func (p *Proof) UnmarshalBinary(data []byte) error {
-	if p == nil {
-		return errInvalidProof
-	}
-
-	// Commitment first
-	p.Commitment = &Commitment{}
-	remaining, err := p.Commitment.UnmarshalBinary(data)
-	if err != nil {
-		return err
-	}
-
-	p.Z1 = new(saferith.Int)
-	p.Z2 = new(saferith.Nat)
-	p.Z3 = new(saferith.Int)
-
-	_, err = marshal.ReadPrimitives(remaining, p.Z1, p.Z2, p.Z3)
-	return err
 }

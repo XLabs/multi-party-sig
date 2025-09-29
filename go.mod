@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/cronokirby/saferith v0.33.0
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
-	github.com/fxamacker/cbor/v2 v2.4.0
+	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/stretchr/testify v1.8.4
 	github.com/xlabs/tss-common v0.0.0-20250627061221-0a6547e8e6da
 	github.com/zeebo/blake3 v0.2.3

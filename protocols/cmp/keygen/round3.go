@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/xlabs/multi-party-sig/internal/marshal"
 	"github.com/xlabs/multi-party-sig/internal/types"
 	"github.com/xlabs/multi-party-sig/pkg/hash"
 	"github.com/xlabs/multi-party-sig/pkg/math/arith"
@@ -88,8 +89,8 @@ func (r *round3) StoreBroadcastMessage(msg round.Message) error {
 		return err
 	}
 
-	schnorrCommitment, err := zksch.UnmarshalCommitment(body.SchnorrCommitments, r.Group())
-	if err != nil {
+	schnorrCommitment := zksch.EmptyCommitment(r.Group())
+	if err := marshal.Decode(body.SchnorrCommitments, schnorrCommitment); err != nil {
 		return fmt.Errorf("schnorr commitment: %w", err)
 	}
 

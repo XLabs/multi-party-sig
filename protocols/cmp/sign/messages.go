@@ -3,6 +3,7 @@ package sign
 import (
 	"errors"
 
+	"github.com/xlabs/multi-party-sig/internal/marshal"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/paillier"
 	zkaffg "github.com/xlabs/multi-party-sig/pkg/zk/affg"
@@ -67,7 +68,7 @@ func (x *Broadcast2) UnmarshalContent() (*paillier.Ciphertext, *paillier.Ciphert
 }
 
 func MakeMessage2(proofEnc *zkenc.Proof) (*Message2, error) {
-	proofBytes, err := proofEnc.MarshalBinary()
+	proofBytes, err := marshal.Encode(proofEnc)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +99,7 @@ func (x *Message2) RoundNumber() int {
 
 func (x *Message2) UnmarshalContent() (*zkenc.Proof, error) {
 	proof := &zkenc.Proof{}
-	if err := proof.UnmarshalBinary(x.ProofEnc); err != nil {
+	if err := marshal.Decode(x.ProofEnc, proof); err != nil {
 		return nil, err
 	}
 
@@ -162,7 +163,8 @@ func makeMessage3(
 	if err != nil {
 		return nil, err
 	}
-	deltaProofBytes, err := DeltaProof.MarshalBinary()
+
+	deltaProofBytes, err := marshal.Encode(DeltaProof)
 	if err != nil {
 		return nil, err
 	}
@@ -174,11 +176,12 @@ func makeMessage3(
 	if err != nil {
 		return nil, err
 	}
-	chiProofBytes, err := ChiProof.MarshalBinary()
+
+	chiProofBytes, err := marshal.Encode(ChiProof)
 	if err != nil {
 		return nil, err
 	}
-	proofLogBytes, err := ProofLog.MarshalBinary()
+	proofLogBytes, err := marshal.Encode(ProofLog)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +237,7 @@ func (x *Message3) UnmarshalContent(grp curve.Curve) (unmarsahledMessage3, error
 	}
 
 	um3.DeltaProof = zkaffg.Empty(grp)
-	if err := um3.DeltaProof.UnmarshalBinary(x.DeltaProof); err != nil {
+	if err := marshal.Decode(x.DeltaProof, um3.DeltaProof); err != nil {
 		return um3, err
 	}
 
@@ -249,12 +252,12 @@ func (x *Message3) UnmarshalContent(grp curve.Curve) (unmarsahledMessage3, error
 	}
 
 	um3.ChiProof = zkaffg.Empty(grp)
-	if err := um3.ChiProof.UnmarshalBinary(x.ChiProof); err != nil {
+	if err := marshal.Decode(x.ChiProof, um3.ChiProof); err != nil {
 		return um3, err
 	}
 
 	um3.ProofLog = zklogstar.Empty(grp)
-	if err := um3.ProofLog.UnmarshalBinary(x.ProofLog); err != nil {
+	if err := marshal.Decode(x.ProofLog, um3.ProofLog); err != nil {
 		return um3, err
 	}
 
@@ -264,7 +267,7 @@ func (x *Message3) UnmarshalContent(grp curve.Curve) (unmarsahledMessage3, error
 // -- round 4 --
 
 func makeMessage4(proofLog *zklogstar.Proof) (*Message4, error) {
-	proofLogBytes, err := proofLog.MarshalBinary()
+	proofLogBytes, err := marshal.Encode(proofLog)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +295,7 @@ func (x *Message4) RoundNumber() int {
 
 func (x *Message4) UnmarshalContent(grp curve.Curve) (*zklogstar.Proof, error) {
 	proofLog := zklogstar.Empty(grp)
-	err := proofLog.UnmarshalBinary(x.ProofLog)
+	err := marshal.Decode(x.ProofLog, proofLog)
 	return proofLog, err
 }
 
