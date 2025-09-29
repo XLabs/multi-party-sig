@@ -2,6 +2,7 @@ package sign
 
 import (
 	"bytes"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -142,6 +143,10 @@ func (s *Signature) UnmarshalBinary(curve curve.Curve, bts []byte) error {
 		return fmt.Errorf("cannot unmarshal into nil Signature")
 	}
 
+	if curve == nil {
+		return fmt.Errorf("cannot unmarshal Signature with nil curve")
+	}
+
 	sclarSize := curve.ScalarBinarySize()
 	pntSize := curve.PointBinarySize()
 	if len(bts) < sclarSize+pntSize {
@@ -232,11 +237,12 @@ func (sig Signature) Verify(public curve.Point, m []byte) error {
 		return err
 	}
 
-	if r != actualAddress {
+	// both are 20 bytes. Use constant time comparison.
+	if subtle.ConstantTimeCompare(r[:], actualAddress[:]) != 1 {
 		return fmt.Errorf("signature verification failed: %x != %x", r, actualAddress)
 	}
 
-	return nil //actual.Equal(sig.R)
+	return nil
 }
 
 // this function is responsible for creating the challegne scalar for schnorr signatures.

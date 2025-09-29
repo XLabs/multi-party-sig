@@ -37,6 +37,44 @@ type Config struct {
 	VerificationShares *party.PointMap
 }
 
+// inspects the basic validity of the config
+func (r *Config) ValidateBasic() bool {
+	if r == nil ||
+		r.ID == "" ||
+		r.Threshold <= 0 ||
+		r.PrivateShare == nil ||
+		r.PublicKey == nil ||
+		r.VerificationShares == nil {
+		return false
+	}
+
+	if r.PrivateShare.Curve() != r.PublicKey.Curve() {
+		return false
+	}
+
+	points := r.VerificationShares.Points
+	if len(points) == 0 || r.Threshold >= len(points) {
+		return false
+	}
+
+	for pid, v := range points {
+		if v == nil || pid == "" {
+			return false
+		}
+
+		if v.Curve() != r.PublicKey.Curve() {
+			return false
+		}
+	}
+
+	// expects to contain self
+	if _, ok := points[r.ID]; !ok {
+		return false
+	}
+
+	return true
+}
+
 // EmptyConfig creates an empty Result with a specific group.
 //
 // This needs to be called before unmarshalling, instead of just using new(Result).

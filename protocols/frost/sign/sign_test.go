@@ -330,7 +330,7 @@ func TestSignTaproot(t *testing.T) {
 }
 
 func genKeyPair(group curve.Curve) (curve.Scalar, curve.Point) {
-	for {
+	for range 50 {
 		secret := sample.Scalar(rand.Reader, group)
 		publicKey := secret.ActOnBase()
 
@@ -338,7 +338,10 @@ func genKeyPair(group curve.Curve) (curve.Scalar, curve.Point) {
 			return secret, publicKey
 		}
 	}
+
+	panic("could not find a valid key pair")
 }
+
 func TestSigMarshal(t *testing.T) {
 	secret, public := genKeyPair(curve.Secp256k1{})
 

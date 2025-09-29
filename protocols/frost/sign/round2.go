@@ -120,7 +120,7 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	// This calculates H(m, B), allowing us to avoid re-hashing this data for
 	// each extra party l.
 	rhoPreHash := hash.New()
-	_ = rhoPreHash.WriteAny(r.M)
+	_ = rhoPreHash.WriteAny(r.Y, r.M) // RFC 9591 requires the public key be included.
 	for idx, l := range r.PartyIDs() {
 		_ = rhoPreHash.WriteAny(idx, r.D[l], r.E[l])
 	}

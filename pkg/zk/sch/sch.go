@@ -32,33 +32,44 @@ type Proof struct {
 	Z Response
 }
 
+var errProveFail = errors.New("failed to create schnorr proof")
+
 // NewProof generates a Schnorr proof of knowledge of exponent for public, using the Fiat-Shamir transform.
-func NewProof(hash *hash.Hash, public curve.Point, private curve.Scalar, gen curve.Point) *Proof {
+func NewProof(hash *hash.Hash, public curve.Point, private curve.Scalar, gen curve.Point) (*Proof, error) {
 	group := private.Curve()
 
 	a := NewRandomness(rand.Reader, group, gen)
 	z := a.Prove(hash, public, private, gen)
+	if z == nil {
+		return nil, errProveFail
+	}
+
 	return &Proof{
 		C: *a.Commitment(),
 		Z: *z,
-	}
+	}, nil
 }
 
 // NewRandomness creates a new a ∈ ℤₚ and the corresponding commitment C = a•G.
 // This can be used to run the proof in a non-interactive way.
 func NewRandomness(rand io.Reader, group curve.Curve, gen curve.Point) *Randomness {
-	if gen == nil {
-		gen = group.NewBasePoint()
-	}
 	a := sample.Scalar(rand, group)
+
+	var c curve.Point
+	if gen == nil {
+		c = a.ActOnBase()
+	} else {
+		c = a.Act(gen)
+	}
+
 	return &Randomness{
 		a:          a,
-		commitment: Commitment{C: a.Act(gen)},
+		commitment: Commitment{C: c},
 	}
 }
 
 func challenge(hash *hash.Hash, group curve.Curve, commitment *Commitment, public, gen curve.Point) (e curve.Scalar, err error) {
-	err = hash.WriteAny(commitment.C, public, gen)
+	err = hash.WriteAny(commitment, public, gen)
 	e = sample.Scalar(hash.Digest(), group)
 	return
 }
@@ -91,7 +102,20 @@ func (z *Response) Verify(hash *hash.Hash, public curve.Point, commitment *Commi
 	if gen == nil {
 		gen = public.Curve().NewBasePoint()
 	}
-	if z == nil || !z.IsValid() || public.IsIdentity() {
+
+	if z == nil || !z.IsValid() {
+		return false
+	}
+
+	if commitment == nil || commitment.C == nil || commitment.C.IsIdentity() || !z.group.Equal(commitment.C.Curve()) {
+		return false
+	}
+
+	if public == nil || public.IsIdentity() || !z.group.Equal(public.Curve()) {
+		return false
+	}
+
+	if !z.group.Equal(gen.Curve()) {
 		return false
 	}
 

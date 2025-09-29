@@ -1,8 +1,8 @@
 package taproot
 
 import (
-	"bytes"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -43,6 +43,8 @@ type SecretKey []byte
 // This is simply an array of 32 bytes.
 type PublicKey []byte
 
+const publicKeyLength = 32
+
 // Public calculates the public key corresponding to a given secret key.
 //
 // This will return an error if the secret key is invalid.
@@ -57,21 +59,25 @@ func (s SecretKey) Public() (PublicKey, error) {
 	return PublicKey(point.XBytes()), nil
 }
 
+const numKeyGenTries = 128
+
 // GenKey generates a new key-pair, from a source of randomness.
-//
-// Errors returned by this function will only come from the reader. If you know
-// that the reader will never return errors, you can rest assured that this
-// function won't either.
 func GenKey(rand io.Reader) (SecretKey, PublicKey, error) {
-	for {
+	for range numKeyGenTries {
 		secret := SecretKey(make([]byte, SecretKeyLength))
 		if _, err := io.ReadFull(rand, secret); err != nil {
 			return nil, nil, err
 		}
-		if public, err := secret.Public(); err == nil {
+
+		public, err := secret.Public()
+		if err == nil {
+			// Successfully generated a valid key pair.
 			return secret, public, nil
 		}
 	}
+
+	// this is highly unlikely.
+	return nil, nil, fmt.Errorf("failed to generate key pair")
 }
 
 // SignatureLen is the number of bytes in a Signature.
@@ -180,15 +186,22 @@ func (pk PublicKey) Verify(sig Signature, m []byte) bool {
 	if len(sig) != SignatureLen {
 		return false
 	}
+	c := curve.Secp256k1{}
+	if len(pk) != publicKeyLength {
+		return false
+	}
 
-	P, err := curve.Secp256k1{}.LiftX(pk)
+	P, err := c.LiftX(pk)
 	if err != nil {
 		return false
 	}
-	s := new(curve.Secp256k1Scalar)
-	if err := s.UnmarshalBinary(sig[32:]); err != nil {
+
+	// unmarshal ensures valid scalar. otherwise err != nil.
+	s, err := c.UnmarshalScalar(sig[32:])
+	if err != nil {
 		return false
 	}
+
 	eHash := TaggedHash("BIP0340/challenge", sig[:32], pk, m)
 	e := new(curve.Secp256k1Scalar)
 	_ = e.UnmarshalBinary(eHash)
@@ -202,5 +215,7 @@ func (pk PublicKey) Verify(sig Signature, m []byte) bool {
 	if !check.HasEvenY() {
 		return false
 	}
-	return bytes.Equal(check.XBytes(), sig[:32])
+
+	//Secp256k1Point.XBytes return 32 bytes.
+	return subtle.ConstantTimeCompare(check.XBytes(), sig[:32]) == 1
 }
