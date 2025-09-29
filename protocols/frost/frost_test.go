@@ -14,14 +14,9 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/protocol"
 	"github.com/xlabs/multi-party-sig/pkg/taproot"
 	"github.com/xlabs/multi-party-sig/protocols/frost/sign"
-	common "github.com/xlabs/tss-common"
 )
 
-var testTrackid = &common.TrackingID{
-	Digest:       []byte{1, 2, 3, 4},
-	PartiesState: nil,
-	AuxilaryData: nil,
-}
+var testTrackid = test.TestTrackingID
 
 func do(t *testing.T, id party.ID, ids []party.ID, threshold int, message []byte, n *test.Network, wg *sync.WaitGroup) {
 	var cnfg *Config

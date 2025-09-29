@@ -11,14 +11,9 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/round"
-	common "github.com/xlabs/tss-common"
 )
 
-var testTrackingId = &common.TrackingID{
-	Digest:       []byte{1, 2, 4, 5, 6, 70, 19},
-	PartiesState: []byte{},
-	AuxilaryData: []byte{},
-}
+var testTrackingId = test.TestTrackingID
 
 func checkOutput(t *testing.T, rounds []round.Session, parties party.IDSlice) {
 	group := curve.Secp256k1{}

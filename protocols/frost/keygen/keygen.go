@@ -36,7 +36,6 @@ func StartKeygenCommon(taproot bool, group curve.Curve, participants []party.ID,
 			Group:            group,
 			TrackingID:       &common.TrackingID{},
 		}
-
 		if err := info.TrackingID.FromString(string(sessionID)); err != nil {
 			return nil, fmt.Errorf("keygen.Start: %w", err)
 		}
