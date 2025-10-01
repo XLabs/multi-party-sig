@@ -142,6 +142,17 @@ func (*Secp256k1Scalar) Curve() Curve {
 	return Secp256k1{}
 }
 
+func (s *Secp256k1Scalar) Clone() Scalar {
+	if s == nil {
+		return nil
+	}
+
+	copy := new(Secp256k1Scalar)
+	copy.Set(s)
+
+	return copy
+}
+
 var errNilScalar = errors.New("secp256k1Scalar is nil")
 
 func (s *Secp256k1Scalar) MarshalBinary() ([]byte, error) {
