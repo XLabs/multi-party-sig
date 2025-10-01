@@ -95,6 +95,8 @@ type Scalar interface {
 	IsZero() bool
 	// Set mutates this Scalar, replacing its value with another.
 	Set(Scalar) Scalar
+	// Clone creates a deep copy of this Scalar, safe to use in a concurrent environment.
+	Clone() Scalar
 	// SetNat mutates this Scalar, replacing it with the value of a number.
 	//
 	// This number must be interpreted modulo the order of the group.

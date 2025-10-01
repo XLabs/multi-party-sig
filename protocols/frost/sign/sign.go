@@ -24,12 +24,20 @@ func StartSignCommon(taproot bool, result *keygen.Config, signers []party.ID, me
 			return nil, fmt.Errorf("invalid keygen result")
 		}
 
+		// Since the config might be used concurrently in multiple signing sessions, and this session might
+		// mutate the config (for example, by applying `scalar.Act(pk)`),
+		// we clone it here to be safe.
+		configCopy, err := result.Clone()
+		if err != nil {
+			return nil, fmt.Errorf("sign.StartSign: failed to clone keygen config: %w", err)
+		}
+
 		info := round.Info{
 			FinalRoundNumber: protocolRounds,
-			SelfID:           result.ID,
+			SelfID:           configCopy.ID,
 			PartyIDs:         party.NewIDSlice(signers), // ensures sorted order
-			Threshold:        result.Threshold,
-			Group:            result.PublicKey.Curve(),
+			Threshold:        configCopy.Threshold,
+			Group:            configCopy.PublicKey.Curve(),
 			ProtocolID:       protocolID,
 			TrackingID:       &common.TrackingID{},
 		}
@@ -52,9 +60,9 @@ func StartSignCommon(taproot bool, result *keygen.Config, signers []party.ID, me
 			Helper:  helper,
 			taproot: taproot,
 			M:       messageHash,
-			Y:       result.PublicKey,
-			YShares: result.VerificationShares.Points,
-			s_i:     result.PrivateShare,
+			Y:       configCopy.PublicKey,
+			YShares: configCopy.VerificationShares.Points,
+			s_i:     configCopy.PrivateShare,
 		}, nil
 	}
 }
