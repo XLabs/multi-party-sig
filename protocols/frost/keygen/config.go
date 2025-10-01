@@ -140,12 +140,21 @@ func (r *Config) DeriveChild(i uint32) (*Config, error) {
 	return r.Derive(scalar, newChainKey)
 }
 
+var (
+	errNilConfig     = errors.New("nil config")
+	errInvalidConfig = errors.New("invalid config")
+)
+
 // Clone creates a deep clone of this struct, and all the values contained inside.
 // This method is safe to run along read operations, but not alongside mutating
 // operations.
 func (r *Config) Clone() (*Config, error) {
-	if r == nil || !r.ValidateBasic() {
-		return nil, errors.New("invalid config")
+	if r == nil {
+		return nil, errNilConfig
+	}
+
+	if !r.ValidateBasic() {
+		return nil, errInvalidConfig
 	}
 
 	// since NewPointMap doesn't clone the points inside, we do it ourselves here.
