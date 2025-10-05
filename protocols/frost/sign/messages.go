@@ -26,7 +26,7 @@ func makeBroadcast2Message(Di, Ei curve.Point) (round.BroadcastContent, error) {
 }
 
 func (b *Broadcast2) GetProtocol() common.ProtocolType {
-	return common.ProtocolFROST
+	return common.ProtocolFROSTSign
 }
 
 func (b *Broadcast2) RoundNumber() int {
@@ -84,7 +84,7 @@ func (b *Broadcast3) ValidateBasic() bool {
 }
 
 func (b *Broadcast3) GetProtocol() common.ProtocolType {
-	return common.ProtocolFROST
+	return common.ProtocolFROSTSign
 }
 
 // This message should be broadcast, but not reliably.

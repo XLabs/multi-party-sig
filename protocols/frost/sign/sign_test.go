@@ -25,7 +25,10 @@ import (
 )
 
 var testTrackid = &common.TrackingID{
-	Digest: []byte{1, 2, 3, 4},
+	Digest:        []byte{1, 2, 3, 4},
+	Protocol:      uint32(common.ProtocolFROSTSign.ToInt()),
+	PartiesState:  []byte{},
+	AuxiliaryData: []byte{},
 }
 
 func SignEcSchnorr(secret curve.Scalar, m []byte) Signature {
