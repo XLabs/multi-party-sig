@@ -3,6 +3,7 @@ package keygen
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/xlabs/multi-party-sig/internal/bip32"
 	"github.com/xlabs/multi-party-sig/internal/params"
@@ -137,6 +138,40 @@ func (r *Config) DeriveChild(i uint32) (*Config, error) {
 		return nil, err
 	}
 	return r.Derive(scalar, newChainKey)
+}
+
+var (
+	errNilConfig     = errors.New("nil config")
+	errInvalidConfig = errors.New("invalid config")
+)
+
+// Clone creates a deep clone of this struct, and all the values contained inside.
+// This method is safe to run along read operations, but not alongside mutating
+// operations.
+func (r *Config) Clone() (*Config, error) {
+	if r == nil {
+		return nil, errNilConfig
+	}
+
+	if !r.ValidateBasic() {
+		return nil, errInvalidConfig
+	}
+
+	// since NewPointMap doesn't clone the points inside, we do it ourselves here.
+	vs := make(map[party.ID]curve.Point, len(r.VerificationShares.Points))
+	for k, v := range r.VerificationShares.Points {
+		vs[k] = v.Clone()
+	}
+	shares := party.NewPointMap(vs)
+
+	return &Config{
+		ID:                 r.ID,
+		Threshold:          r.Threshold,
+		PrivateShare:       r.PrivateShare.Clone(),
+		PublicKey:          r.PublicKey.Clone(),
+		ChainKey:           slices.Clone(r.ChainKey),
+		VerificationShares: shares,
+	}, nil
 }
 
 // TaprootConfig is like result, but for Taproot / BIP-340 keys.
