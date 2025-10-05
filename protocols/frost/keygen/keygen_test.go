@@ -15,9 +15,9 @@ import (
 )
 
 var testTrackingId = &common.TrackingID{
-	Digest:       []byte{1, 2, 4, 5, 6, 70, 19},
-	PartiesState: []byte{},
-	AuxilaryData: []byte{},
+	Digest:        []byte{1, 2, 4, 5, 6, 70, 19},
+	PartiesState:  []byte{},
+	AuxiliaryData: []byte{},
 }
 
 func checkOutput(t *testing.T, rounds []round.Session, parties party.IDSlice) {
