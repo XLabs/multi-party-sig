@@ -12,8 +12,8 @@ import (
 
 const (
 	// Frost Sign with Threshold.
-	protocolID        = "frost/sign-threshold"
-	protocolIDTaproot = "frost/sign-threshold-taproot"
+	protocolID        = string(common.ProtocolFROSTSign)
+	protocolIDTaproot = string(common.ProtocolFROSTSign) + "-taproot"
 	// This protocol has 3 concrete rounds.
 	protocolRounds round.Number = 3
 )

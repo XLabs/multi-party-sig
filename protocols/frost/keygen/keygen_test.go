@@ -14,10 +14,12 @@ import (
 	common "github.com/xlabs/tss-common"
 )
 
+// dummy tracking ID for tests
 var testTrackingId = &common.TrackingID{
-	Digest:       []byte{1, 2, 4, 5, 6, 70, 19},
-	PartiesState: []byte{},
-	AuxilaryData: []byte{},
+	Digest:        []byte{1, 2, 4, 5, 6, 70, 19},
+	PartiesState:  []byte{},
+	AuxiliaryData: []byte{},
+	Protocol:      uint32(common.ProtocolFROSTDKG.ToInt()),
 }
 
 func checkOutput(t *testing.T, rounds []round.Session, parties party.IDSlice) {

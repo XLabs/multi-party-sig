@@ -31,7 +31,7 @@ func makeBroadcast2Message(Phi_i *polynomial.Exponent, Sigma_i *zksch.Proof, Com
 
 // GetProtocol implements round.Content.
 func (b *Broadcast2) GetProtocol() common.ProtocolType {
-	return common.ProtocolFROST
+	return common.ProtocolFROSTDKG
 }
 
 // Reliable implements round.ReliableBroadcastContent.
@@ -62,7 +62,7 @@ func makeBroadcast3Message(c_l types.RID, decommitment hash.Decommitment) *Broad
 }
 
 func (b *Broadcast3) GetProtocol() common.ProtocolType {
-	return common.ProtocolFROST
+	return common.ProtocolFROSTDKG
 }
 
 // Reliable implements round.BroadcastRoundContent.
@@ -96,7 +96,7 @@ func createMessage3(f_li curve.Scalar) (*Message3, error) {
 }
 
 func (b *Message3) GetProtocol() common.ProtocolType {
-	return common.ProtocolFROST
+	return common.ProtocolFROSTDKG
 }
 
 // RoundNumber implements round.Content.

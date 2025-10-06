@@ -17,10 +17,12 @@ import (
 	common "github.com/xlabs/tss-common"
 )
 
+// dummy tracking ID for tests
 var testTrackid = &common.TrackingID{
-	Digest:       []byte{1, 2, 3, 4},
-	PartiesState: nil,
-	AuxilaryData: nil,
+	Digest:        []byte{1, 2, 3, 4},
+	PartiesState:  nil,
+	AuxiliaryData: nil,
+	Protocol:      uint32(common.ProtocolFROSTSign.ToInt()),
 }
 
 func do(t *testing.T, id party.ID, ids []party.ID, threshold int, message []byte, n *test.Network, wg *sync.WaitGroup) {
