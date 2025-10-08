@@ -19,7 +19,7 @@ import (
 
 // protocolSignID for the "3 round" variant using echo broadcast.
 const (
-	ProtocolName                    = common.ProtocolECDSA + ":sign"
+	ProtocolName                    = common.ProtocolECDSASign
 	protocolSignRounds round.Number = 5
 )
 

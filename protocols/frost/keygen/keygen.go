@@ -13,8 +13,8 @@ import (
 
 const (
 	// Frost KeyGen with Threshold.
-	protocolID        = "frost/keygen-threshold"
-	protocolIDTaproot = "frost/keygen-threshold-taproot"
+	protocolID        = string(common.ProtocolFROSTDKG)
+	protocolIDTaproot = string(common.ProtocolFROSTDKG) + "-taproot"
 	// This protocol has 3 concrete rounds.
 	protocolRounds round.Number = 3
 )

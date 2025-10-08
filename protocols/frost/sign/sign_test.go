@@ -21,12 +21,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	"github.com/xlabs/multi-party-sig/pkg/taproot"
 	"github.com/xlabs/multi-party-sig/protocols/frost/keygen"
-	common "github.com/xlabs/tss-common"
 )
-
-var testTrackid = &common.TrackingID{
-	Digest: []byte{1, 2, 3, 4},
-}
 
 func SignEcSchnorr(secret curve.Scalar, m []byte) Signature {
 	group := secret.Curve()
@@ -218,7 +213,7 @@ func TestSign(t *testing.T) {
 		// ensuring shuffling the order of party IDs doesn't affect signing process.
 		shuffledIds := shuffleIds(partyIDs)
 
-		r, err := StartSignCommon(false, result, shuffledIds, steak[:])(testTrackid.ToByteString())
+		r, err := StartSignCommon(false, result, shuffledIds, steak[:])(test.TestTrackingID.ToByteString())
 		require.NoError(t, err, "round creation should not result in an error")
 		rounds = append(rounds, r)
 	}
@@ -313,7 +308,7 @@ func TestSignTaproot(t *testing.T) {
 			PublicKey:          tapRootPublicKey,
 			VerificationShares: party.NewPointMap(genericVerificationShares),
 		}
-		r, err := StartSignCommon(true, normalResult, partyIDs, steak)(testTrackid.ToByteString())
+		r, err := StartSignCommon(true, normalResult, partyIDs, steak)(test.TestTrackingID.ToByteString())
 		require.NoError(t, err, "round creation should not result in an error")
 		rounds = append(rounds, r)
 	}

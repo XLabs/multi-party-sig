@@ -17,7 +17,7 @@ import (
 
 const (
 	Rounds       round.Number = 5
-	ProtocolName              = common.ProtocolECDSA + ":keygen"
+	ProtocolName              = common.ProtocolECDSADKG
 )
 
 func Start(info round.Info, pl *pool.Pool, c *config.Config) protocol.StartFunc {
