@@ -14,9 +14,10 @@ import (
 	"github.com/xlabs/multi-party-sig/protocols/cmp/config"
 )
 
-// GenerateConfig creates some random configuration for N parties with set threshold T over the group.
-func GenerateConfig(group curve.Curve, N, T int, source io.Reader, pl *pool.Pool) (map[party.ID]*config.Config, party.IDSlice) {
-	partyIDs := PartyIDs(N)
+// GenerateConfigForParties creates some random configuration for the given party IDs with set threshold T over the group.
+func GenerateConfigForParties(group curve.Curve, partyIDs party.IDSlice, T int, source io.Reader, pl *pool.Pool) map[party.ID]*config.Config {
+	N := len(partyIDs)
+
 	configs := make(map[party.ID]*config.Config, N)
 	public := make(map[party.ID]*config.Public, N)
 
@@ -57,5 +58,12 @@ func GenerateConfig(group curve.Curve, N, T int, source io.Reader, pl *pool.Pool
 			Pedersen: pedersenPublic,
 		}
 	}
-	return configs, partyIDs
+
+	return configs
+}
+
+// GenerateConfig creates some random configuration for N parties with set threshold T over the group.
+func GenerateConfig(group curve.Curve, N, T int, source io.Reader, pl *pool.Pool) (map[party.ID]*config.Config, party.IDSlice) {
+	partyIDs := PartyIDs(N)
+	return GenerateConfigForParties(group, partyIDs, T, source, pl), partyIDs
 }
