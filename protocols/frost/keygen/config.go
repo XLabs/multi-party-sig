@@ -49,7 +49,7 @@ func (r *Config) ValidateBasic() bool {
 		return false
 	}
 
-	if r.PrivateShare.Curve() != r.PublicKey.Curve() {
+	if !r.PrivateShare.Curve().Equal(r.PublicKey.Curve()) {
 		return false
 	}
 
@@ -63,7 +63,7 @@ func (r *Config) ValidateBasic() bool {
 			return false
 		}
 
-		if v.Curve() != r.PublicKey.Curve() {
+		if !v.Curve().Equal(r.PublicKey.Curve()) {
 			return false
 		}
 	}
