@@ -83,8 +83,6 @@ func (r *round2) VerifyMessage(msg round.Message) error {
 		return fmt.Errorf("round2: failed to unmarshal proof: %w", err)
 	}
 
-	// TODO: this assumes we've received Broadcast2 before we reach this point.
-	// (r.K[from] is nil and will FAIL to verify this proof). Consider how to handle this when Broadcast2 is not yet received.
 	if !proofEnc.Verify(r.Group(), r.HashForID(from), zkenc.Public{
 		K:      r.K[from],
 		Prover: r.Paillier[from],
