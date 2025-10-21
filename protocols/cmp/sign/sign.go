@@ -19,8 +19,8 @@ import (
 
 // protocolSignID for the "3 round" variant using echo broadcast.
 const (
-	ProtocolName                    = common.ProtocolECDSASign
-	protocolSignRounds round.Number = 5
+	ProtocolName              = common.ProtocolECDSASign
+	Rounds       round.Number = 5
 )
 
 func StartSign(c *config.Config, signers []party.ID, message []byte, pl *pool.Pool) protocol.StartFunc {
@@ -44,7 +44,7 @@ func StartSign(c *config.Config, signers []party.ID, message []byte, pl *pool.Po
 
 		info := round.Info{
 			ProtocolID:       string(ProtocolName),
-			FinalRoundNumber: protocolSignRounds,
+			FinalRoundNumber: Rounds,
 			SelfID:           config.ID,
 			PartyIDs:         signers,
 			Threshold:        config.Threshold,
