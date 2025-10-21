@@ -31,6 +31,19 @@ type PublicKey struct {
 	nPlusOne *saferith.Nat
 }
 
+func (pk *PublicKey) Clone() *PublicKey {
+	if pk == nil {
+		return nil
+	}
+
+	return &PublicKey{
+		n:        arith.ModulusFromN(saferith.ModulusFromNat(pk.n.Nat())),        // deep copy
+		nSquared: arith.ModulusFromN(saferith.ModulusFromNat(pk.nSquared.Nat())), // deep copy
+		nNat:     pk.nNat.Clone(),
+		nPlusOne: pk.nPlusOne.Clone(),
+	}
+}
+
 // N is the public modulus making up this key.
 func (pk *PublicKey) N() *saferith.Modulus {
 	return pk.n.Modulus

@@ -23,8 +23,13 @@ const (
 	protocolSignRounds round.Number = 5
 )
 
-func StartSign(config *config.Config, signers []party.ID, message []byte, pl *pool.Pool) protocol.StartFunc {
+func StartSign(c *config.Config, signers []party.ID, message []byte, pl *pool.Pool) protocol.StartFunc {
 	return func(sessionID []byte) (round.Session, error) {
+		config, err := c.Clone()
+		if err != nil {
+			return nil, fmt.Errorf("sign.Create: failed to clone config: %w", err)
+		}
+
 		group := config.Group
 
 		trackingID := &common.TrackingID{}

@@ -183,3 +183,17 @@ func ValidatePrime(p *saferith.Nat) error {
 	}
 	return nil
 }
+
+// Clone creates a deep copy of the secret key.
+func (sk *SecretKey) Clone() *SecretKey {
+	if sk == nil {
+		return nil
+	}
+	return &SecretKey{
+		PublicKey: sk.PublicKey.Clone(),
+		p:         new(saferith.Nat).SetNat(sk.p),
+		q:         new(saferith.Nat).SetNat(sk.q),
+		phi:       new(saferith.Nat).SetNat(sk.phi),
+		phiInv:    new(saferith.Nat).SetNat(sk.phiInv),
+	}
+}

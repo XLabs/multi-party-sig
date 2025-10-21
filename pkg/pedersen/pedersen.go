@@ -125,3 +125,16 @@ func (p *Parameters) WriteTo(w io.Writer) (int64, error) {
 func (Parameters) Domain() string {
 	return "Pedersen Parameters"
 }
+
+// Clone returns a deep copy of the parameters.
+func (p *Parameters) Clone() *Parameters {
+	if p == nil {
+		return nil
+	}
+
+	return &Parameters{
+		n: arith.ModulusFromN(saferith.ModulusFromNat(p.n.Nat())), // deep copy
+		s: new(saferith.Nat).SetNat(p.s),                          // SetNat copies
+		t: new(saferith.Nat).SetNat(p.t),
+	}
+}

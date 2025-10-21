@@ -279,3 +279,104 @@ func (c *Config) DeriveBIP32(i uint32) (*Config, error) {
 	}
 	return c.Derive(scalar, newChainKey)
 }
+
+// inspects the basic validity of the config
+func (r *Config) ValidateBasic() bool {
+	if r == nil ||
+		r.ID == "" ||
+		r.Threshold <= 0 ||
+		r.ECDSA == nil ||
+		r.ElGamal == nil ||
+		r.Group == nil ||
+		r.Paillier == nil ||
+		len(r.RID) != params.SecBytes ||
+		r.Public == nil {
+		return false
+	}
+
+	if !r.ECDSA.Curve().Equal(r.ElGamal.Curve()) {
+		return false
+	}
+
+	points := r.Public
+	if len(points) == 0 || r.Threshold >= len(points) {
+		return false
+	}
+
+	for pid, v := range points {
+		if v == nil || pid == "" {
+			return false
+		}
+
+		if v.Paillier == nil || v.Pedersen == nil || v.ECDSA == nil || v.ElGamal == nil {
+			return false
+		}
+
+		if !v.ECDSA.Curve().Equal(r.Group) {
+			return false
+		}
+
+		if !v.ElGamal.Curve().Equal(r.Group) {
+			return false
+		}
+	}
+
+	// expects to contain self
+	if _, ok := points[r.ID]; !ok {
+		return false
+	}
+
+	return true
+}
+
+var (
+	errNilConfig     = errors.New("nil config")
+	errInvalidConfig = errors.New("invalid config")
+)
+
+// Clone returns a deep copy of the config.
+func (c *Config) Clone() (*Config, error) {
+	if c == nil {
+		return nil, errNilConfig
+	}
+
+	if !c.ValidateBasic() {
+		return nil, errInvalidConfig
+	}
+
+	crv := c.Group
+	if crv == nil {
+		return nil, errInvalidConfig
+	}
+
+	publicCpy := make(map[party.ID]*Public, len(c.Public))
+	for k, v := range c.Public {
+		if v == nil {
+			return nil, errInvalidConfig
+		}
+
+		publicCpy[k] = &Public{
+			ECDSA:    v.ECDSA.Clone(),
+			ElGamal:  v.ElGamal.Clone(),
+			Paillier: v.Paillier.Clone(),
+			Pedersen: v.Pedersen.Clone(),
+		}
+	}
+
+	chainkeyCpy := make([]byte, len(c.ChainKey))
+	copy(chainkeyCpy, c.ChainKey)
+
+	cpy := &Config{
+		Group:     c.Group,
+		ID:        c.ID,
+		Threshold: c.Threshold,
+		ECDSA:     c.ECDSA.Clone(),
+		ElGamal:   c.ElGamal.Clone(),
+		Paillier:  c.Paillier.Clone(),
+		RID:       c.RID.Copy(),
+		ChainKey:  chainkeyCpy,
+		Public:    publicCpy,
+	}
+
+	return cpy, nil
+}

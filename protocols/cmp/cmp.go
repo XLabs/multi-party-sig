@@ -1,6 +1,9 @@
 package cmp
 
 import (
+	"fmt"
+
+	"github.com/xlabs/multi-party-sig/pkg/ecdsa"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/pool"
@@ -9,6 +12,7 @@ import (
 	"github.com/xlabs/multi-party-sig/protocols/cmp/config"
 	"github.com/xlabs/multi-party-sig/protocols/cmp/keygen"
 	"github.com/xlabs/multi-party-sig/protocols/cmp/sign"
+	common "github.com/xlabs/tss-common"
 )
 
 // Config represents the stored state of a party who participated in a successful `Keygen` protocol.
@@ -61,4 +65,46 @@ func Refresh(config *Config, pl *pool.Pool) protocol.StartFunc {
 // Returns *ecdsa.Signature if successful.
 func Sign(config *Config, signers []party.ID, messageHash []byte, pl *pool.Pool) protocol.StartFunc {
 	return sign.StartSign(config, signers, messageHash, pl)
+}
+
+// TODO: The following is almost a duplicate of frost.Secp256k1SignatureTranslate:
+
+var (
+	ErrNilSignatureData = fmt.Errorf("signature data is nil")
+	ErrEmptySignatureS  = fmt.Errorf("signature.S data is empty")
+	ErrEmptySignatureR  = fmt.Errorf("signature.R data is empty")
+)
+
+// used to convert a common.SignatureData to a frost.Signature.
+// frost signature can be turned to contractSignature which can be used by ethereum contracts.
+func Secp256k1SignatureTranslate(sig *common.SignatureData) (ecdsa.Signature, error) {
+	// TODO: This is similar to FROST's implementation. Consider refactoring to avoid code duplication.
+	if sig == nil {
+		return ecdsa.Signature{}, ErrNilSignatureData
+	}
+
+	if sig.S == nil {
+		return ecdsa.Signature{}, ErrEmptySignatureS
+	}
+
+	if sig.R == nil {
+		return ecdsa.Signature{}, ErrEmptySignatureR
+	}
+
+	group := curve.Secp256k1{}
+
+	z, err := group.UnmarshalScalar(sig.S)
+	if err != nil {
+		return ecdsa.Signature{}, fmt.Errorf("failed to unmarshal S: %w", err)
+	}
+
+	R, err := group.UnmarshalPoint(sig.R)
+	if err != nil {
+		return ecdsa.Signature{}, fmt.Errorf("failed to unmarshal R: %w", err)
+	}
+
+	return ecdsa.Signature{
+		R: R,
+		S: z,
+	}, nil
 }
