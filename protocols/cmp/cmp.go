@@ -3,6 +3,7 @@ package cmp
 import (
 	"fmt"
 
+	"github.com/xlabs/multi-party-sig/internal/types"
 	"github.com/xlabs/multi-party-sig/pkg/ecdsa"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
@@ -75,36 +76,16 @@ var (
 	ErrEmptySignatureR  = fmt.Errorf("signature.R data is empty")
 )
 
-// used to convert a common.SignatureData to a frost.Signature.
-// frost signature can be turned to contractSignature which can be used by ethereum contracts.
+// used to convert a common.SignatureData to an ecdsa.Signature.
+// can be translated to a contract signature representation later.
 func Secp256k1SignatureTranslate(sig *common.SignatureData) (ecdsa.Signature, error) {
-	// TODO: This is similar to FROST's implementation. Consider refactoring to avoid code duplication.
-	if sig == nil {
-		return ecdsa.Signature{}, ErrNilSignatureData
-	}
-
-	if sig.S == nil {
-		return ecdsa.Signature{}, ErrEmptySignatureS
-	}
-
-	if sig.R == nil {
-		return ecdsa.Signature{}, ErrEmptySignatureR
-	}
-
-	group := curve.Secp256k1{}
-
-	z, err := group.UnmarshalScalar(sig.S)
+	sigstruct, err := types.CommonSignatureDataTranslate(sig, curve.Secp256k1{})
 	if err != nil {
-		return ecdsa.Signature{}, fmt.Errorf("failed to unmarshal S: %w", err)
-	}
-
-	R, err := group.UnmarshalPoint(sig.R)
-	if err != nil {
-		return ecdsa.Signature{}, fmt.Errorf("failed to unmarshal R: %w", err)
+		return ecdsa.Signature{}, err
 	}
 
 	return ecdsa.Signature{
-		R: R,
-		S: z,
+		R: sigstruct.R,
+		S: sigstruct.S,
 	}, nil
 }
