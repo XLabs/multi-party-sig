@@ -34,13 +34,18 @@ func parallelizeAlone(f func(int) interface{}, count int) []interface{} {
 type command struct {
 	search bool
 	// This counter indicates the number of results that still need to be produced.
-	ctr *int64
-	// This channel is used to signal that the counter was modified
-	ctrChanged chan<- struct{}
-	// This is the index we evaluate our function at, when not searching
+	// also used to store results in search mode.
+	ctr *atomic.Int64
+
+	// notifies when task is complete by each worker
+	dn *sync.WaitGroup
+
+	// This is the index/order we evaluate our function at, when not searching.
 	i int
+
 	f func(int) interface{}
-	// This is the array where we put results
+
+	// the array where we put results
 	results []interface{}
 }
 
@@ -48,17 +53,21 @@ type command struct {
 //
 // We need to keep searching for successful queries of f while *ctr > 0.
 // When we find a successful result, we decrement *ctr.
-func workerSearch(results []interface{}, ctrChanged chan<- struct{}, f func(int) interface{}, ctr *int64) {
-	for atomic.LoadInt64(ctr) > 0 {
-		res := f(0)
+func (c *command) workerSearch() {
+	defer c.dn.Done()
+
+	// keep searching while we still need results
+	for c.ctr.Load() > 0 {
+		// using 0 as dummy values, since search functions don't use the index
+		res := c.f(0)
 		if res == nil {
 			continue
 		}
-		i := atomic.AddInt64(ctr, -1)
-		if i >= 0 {
-			results[i] = res
+
+		// store result using an atomic decrement, to avoid races on slice entry.
+		if i := c.ctr.Add(-1); i >= 0 {
+			c.results[i] = res
 		}
-		ctrChanged <- struct{}{}
 	}
 }
 
@@ -66,11 +75,11 @@ func workerSearch(results []interface{}, ctrChanged chan<- struct{}, f func(int)
 func worker(commands <-chan command) {
 	for c := range commands {
 		if c.search {
-			workerSearch(c.results, c.ctrChanged, c.f, c.ctr)
+			c.workerSearch()
 		} else {
 			c.results[c.i] = c.f(c.i)
-			atomic.AddInt64(c.ctr, -1)
-			c.ctrChanged <- struct{}{}
+			c.ctr.Add(-1)
+			c.dn.Done()
 		}
 	}
 }
@@ -132,30 +141,27 @@ func (p *Pool) Search(count int, f func() interface{}) []interface{} {
 		return searchAlone(f, count)
 	}
 
-	results := make([]interface{}, count)
+	ctr := &atomic.Int64{}
+	ctr.Store(int64(count))
 
-	ctr := int64(count)
-	ctrChanged := make(chan struct{})
+	dn := &sync.WaitGroup{}
+	dn.Add(p.workerCount)
+
 	cmd := command{
-		search:     true,
-		ctr:        &ctr,
-		ctrChanged: ctrChanged,
-		f:          func(i int) interface{} { return f() },
-		results:    results,
-	}
-	cmdI := 0
-	for cmdI < p.workerCount {
-		select {
-		case p.commands <- cmd:
-			cmdI++
-		case <-ctrChanged:
-		}
-	}
-	for atomic.LoadInt64(&ctr) > 0 {
-		<-ctrChanged
+		search:  true,
+		ctr:     ctr,
+		f:       func(i int) interface{} { return f() },
+		results: make([]interface{}, count),
+		dn:      dn,
 	}
 
-	return results
+	for range p.workerCount {
+		p.commands <- cmd
+	}
+
+	cmd.dn.Wait()
+
+	return cmd.results
 }
 
 // Parallelize calls a function count times, passing in indices from 0..count-1.
@@ -168,30 +174,23 @@ func (p *Pool) Parallelize(count int, f func(int) interface{}) []interface{} {
 
 	results := make([]interface{}, count)
 
-	ctr := int64(count)
-	ctrChanged := make(chan struct{})
-	cmdI := 0
-	for cmdI < count {
-		cmd := command{
-			search:     false,
-			i:          cmdI,
-			ctr:        &ctr,
-			ctrChanged: ctrChanged,
-			f:          f,
-			results:    results,
-		}
-		// We won't be able to send all the commands without blocking, so we make
-		// sure to interleave picking off the results of workers to free them up
-		// to receive our commands
-		select {
-		case p.commands <- cmd:
-			cmdI++
-		case <-ctrChanged:
+	ctr := &atomic.Int64{}
+	ctr.Store(int64(count))
+
+	dn := &sync.WaitGroup{}
+	dn.Add(count)
+	for cmdI := range count {
+		p.commands <- command{
+			search:  false,
+			i:       cmdI,
+			ctr:     ctr,
+			f:       f,
+			results: results,
+			dn:      dn,
 		}
 	}
-	for atomic.LoadInt64(&ctr) > 0 {
-		<-ctrChanged
-	}
+
+	dn.Wait()
 
 	return results
 }
