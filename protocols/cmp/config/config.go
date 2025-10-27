@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"sync"
 
 	"github.com/xlabs/multi-party-sig/internal/bip32"
 	"github.com/xlabs/multi-party-sig/internal/params"
@@ -42,6 +43,11 @@ type Config struct {
 	ChainKey types.RID
 	// Public maps party.ID to public. It contains all public information associated to a party.
 	Public map[party.ID]*Public
+
+	publicPointOnce sync.Once
+	// Do not access directly, use PublicPoint() instead.
+	// otherwise, it may not be initialized.
+	publicPoint curve.Point
 }
 
 // Public holds public information for a party.
@@ -58,16 +64,22 @@ type Public struct {
 
 // PublicPoint returns the group's public ECC point.
 func (c *Config) PublicPoint() curve.Point {
-	sum := c.Group.NewPoint()
-	partyIDs := make([]party.ID, 0, len(c.Public))
-	for j := range c.Public {
-		partyIDs = append(partyIDs, j)
-	}
-	l := polynomial.Lagrange(c.Group, partyIDs)
-	for j, partyJ := range c.Public {
-		sum = sum.Add(l[j].Act(partyJ.ECDSA))
-	}
-	return sum
+	// blocking the case where PublicPoint is re-computed multiple times
+	c.publicPointOnce.Do(func() {
+		sum := c.Group.NewPoint()
+		partyIDs := make([]party.ID, 0, len(c.Public))
+		for j := range c.Public {
+			partyIDs = append(partyIDs, j)
+		}
+		l := polynomial.Lagrange(c.Group, partyIDs)
+		for j, partyJ := range c.Public {
+			sum = sum.Add(l[j].Act(partyJ.ECDSA))
+		}
+
+		c.publicPoint = sum
+	})
+
+	return c.publicPoint
 }
 
 // PartyIDs returns a sorted slice of party IDs.
@@ -367,15 +379,16 @@ func (c *Config) Clone() (*Config, error) {
 	copy(chainkeyCpy, c.ChainKey)
 
 	cpy := &Config{
-		Group:     c.Group,
-		ID:        c.ID,
-		Threshold: c.Threshold,
-		ECDSA:     c.ECDSA.Clone(),
-		ElGamal:   c.ElGamal.Clone(),
-		Paillier:  c.Paillier.Clone(),
-		RID:       c.RID.Copy(),
-		ChainKey:  chainkeyCpy,
-		Public:    publicCpy,
+		Group:       c.Group,
+		ID:          c.ID,
+		Threshold:   c.Threshold,
+		ECDSA:       c.ECDSA.Clone(),
+		ElGamal:     c.ElGamal.Clone(),
+		Paillier:    c.Paillier.Clone(),
+		RID:         c.RID.Copy(),
+		ChainKey:    chainkeyCpy,
+		Public:      publicCpy,
+		publicPoint: c.PublicPoint().Clone(),
 	}
 
 	return cpy, nil
