@@ -25,8 +25,6 @@ type round4 struct {
 
 	// ChiShare = χᵢ
 	ChiShare curve.Scalar
-
-	verifiedMessage4 map[party.ID]struct{}
 }
 
 // StoreBroadcastMessage implements round.BroadcastRound.
@@ -74,11 +72,11 @@ func (r *round4) VerifyMessage(msg round.Message) error {
 		Prover: r.Paillier[from],
 		Aux:    r.Pedersen[to],
 	}
+
 	if !proofLog.Verify(r.HashForID(from), zkLogPublic) {
 		return errors.New("failed to validate log proof")
 	}
 
-	r.verifiedMessage4[from] = struct{}{}
 	return nil
 }
 
@@ -89,17 +87,12 @@ func (round4) StoreMessage(round.Message) error {
 
 func (r round4) CanFinalize() bool {
 	t := r.Threshold() + 1
-	if len(r.verifiedMessage4) < t ||
-		len(r.DeltaShares) == 0 ||
-		len(r.BigDeltaShares) == 0 {
+
+	if len(r.DeltaShares) < t || len(r.BigDeltaShares) < t {
 		return false
 	}
 
 	for _, pid := range r.OtherPartyIDs() {
-		if _, ok := r.verifiedMessage4[pid]; !ok {
-			return false
-		}
-
 		if _, ok := r.DeltaShares[pid]; !ok {
 			return false
 		}

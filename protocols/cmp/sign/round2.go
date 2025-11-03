@@ -24,8 +24,6 @@ type round2 struct {
 	K map[party.ID]*paillier.Ciphertext
 	// G[j] = Gⱼ = encⱼ(γⱼ)
 	G map[party.ID]*paillier.Ciphertext
-	// used to signal we can finalize safely the round
-	verifiedMessage2 map[party.ID]struct{}
 
 	// BigGammaShare[j] = Γⱼ = [γⱼ]•G
 	BigGammaShare map[party.ID]curve.Point
@@ -91,7 +89,6 @@ func (r *round2) VerifyMessage(msg round.Message) error {
 		return errors.New("failed to validate enc proof for K")
 	}
 
-	r.verifiedMessage2[from] = struct{}{}
 	return nil
 }
 
@@ -103,15 +100,11 @@ func (round2) StoreMessage(round.Message) error { return nil }
 func (r *round2) CanFinalize() bool {
 	t := r.Threshold() + 1
 
-	if len(r.verifiedMessage2) < t {
+	if len(r.K) < t || len(r.G) < t {
 		return false
 	}
 
 	for _, pid := range r.OtherPartyIDs() {
-		if _, ok := r.verifiedMessage2[pid]; !ok {
-			return false
-		}
-
 		if _, ok := r.K[pid]; !ok {
 			return false
 		}
@@ -196,12 +189,11 @@ func (r *round2) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	}
 
 	return &round3{
-		round2:           r,
-		DeltaShareBeta:   DeltaShareBetas,
-		ChiShareBeta:     ChiShareBetas,
-		DeltaShareAlpha:  map[party.ID]*saferith.Int{},
-		ChiShareAlpha:    map[party.ID]*saferith.Int{},
-		verifiedMessage3: map[party.ID]struct{}{r.SelfID(): {}},
+		round2:          r,
+		DeltaShareBeta:  DeltaShareBetas,
+		ChiShareBeta:    ChiShareBetas,
+		DeltaShareAlpha: map[party.ID]*saferith.Int{},
+		ChiShareAlpha:   map[party.ID]*saferith.Int{},
 	}, nil
 }
 

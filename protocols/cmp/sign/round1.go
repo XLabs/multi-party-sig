@@ -101,15 +101,14 @@ func (r *round1) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	}
 
 	return &round2{
-		round1:           r,
-		K:                map[party.ID]*paillier.Ciphertext{r.SelfID(): K},
-		G:                map[party.ID]*paillier.Ciphertext{r.SelfID(): G},
-		verifiedMessage2: map[party.ID]struct{}{r.SelfID(): {}},
-		BigGammaShare:    map[party.ID]curve.Point{r.SelfID(): BigGammaShare},
-		GammaShare:       curve.MakeInt(GammaShare),
-		KShare:           KShare,
-		KNonce:           KNonce,
-		GNonce:           GNonce,
+		round1:        r,
+		K:             map[party.ID]*paillier.Ciphertext{r.SelfID(): K},
+		G:             map[party.ID]*paillier.Ciphertext{r.SelfID(): G},
+		BigGammaShare: map[party.ID]curve.Point{r.SelfID(): BigGammaShare},
+		GammaShare:    curve.MakeInt(GammaShare),
+		KShare:        KShare,
+		KNonce:        KNonce,
+		GNonce:        GNonce,
 	}, nil
 }
 

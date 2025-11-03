@@ -26,8 +26,6 @@ type round3 struct {
 	ChiShareAlpha map[party.ID]*saferith.Int
 	// ChiShareBeta[j] = β̂ᵢⱼ
 	ChiShareBeta map[party.ID]*saferith.Int
-
-	verifiedMessage3 map[party.ID]struct{}
 }
 
 // StoreBroadcastMessage implements round.BroadcastRound.
@@ -62,7 +60,6 @@ func (r *round3) VerifyMessage(msg round.Message) error {
 		return round.ErrInvalidContent
 	}
 
-	// TODO: Assumes Broadcast3 has been received
 	um3, err := body.UnmarshalContent(r.Group())
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal Message3 content: %w", err)
@@ -101,8 +98,6 @@ func (r *round3) VerifyMessage(msg round.Message) error {
 		return errors.New("failed to validate log proof")
 	}
 
-	r.verifiedMessage3[from] = struct{}{}
-
 	return nil
 }
 
@@ -135,7 +130,7 @@ func (r *round3) StoreMessage(msg round.Message) error {
 
 func (r *round3) CanFinalize() bool {
 	t := r.Threshold() + 1
-	if len(r.BigGammaShare) < t || len(r.verifiedMessage3) < t {
+	if len(r.BigGammaShare) < t {
 		return false
 	}
 	// we don't need DeltaShareBeta or ChiShareBeta from self (thus t-1).
@@ -144,9 +139,6 @@ func (r *round3) CanFinalize() bool {
 	}
 
 	for _, pid := range r.OtherPartyIDs() {
-		if _, ok := r.verifiedMessage3[pid]; !ok {
-			return false
-		}
 		if _, ok := r.DeltaShareAlpha[pid]; !ok {
 			return false
 		}
@@ -234,12 +226,11 @@ func (r *round3) Finalize(out chan<- common.ParsedMessage) (round.Session, error
 	}
 
 	return &round4{
-		round3:           r,
-		DeltaShares:      map[party.ID]curve.Scalar{r.SelfID(): DeltaShareScalar},
-		BigDeltaShares:   map[party.ID]curve.Point{r.SelfID(): BigDeltaShare},
-		Gamma:            Gamma,
-		ChiShare:         r.Group().NewScalar().SetNat(ChiShare.Mod(r.Group().Order())),
-		verifiedMessage4: map[party.ID]struct{}{r.SelfID(): {}},
+		round3:         r,
+		DeltaShares:    map[party.ID]curve.Scalar{r.SelfID(): DeltaShareScalar},
+		BigDeltaShares: map[party.ID]curve.Point{r.SelfID(): BigDeltaShare},
+		Gamma:          Gamma,
+		ChiShare:       r.Group().NewScalar().SetNat(ChiShare.Mod(r.Group().Order())),
 	}, nil
 }
 
