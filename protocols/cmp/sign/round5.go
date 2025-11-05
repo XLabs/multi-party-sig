@@ -85,7 +85,7 @@ func (r *round5) Finalize(chan<- common.ParsedMessage) (round.Session, error) {
 		Sigma.Add(r.SigmaShares[j])
 	}
 
-	signature := &ecdsa.Signature{
+	signature := ecdsa.Signature{
 		R: r.BigR,
 		S: Sigma,
 	}

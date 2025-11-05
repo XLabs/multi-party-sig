@@ -52,8 +52,8 @@ func TestRound(t *testing.T) {
 	for _, r := range rounds {
 		require.IsType(t, &round.Output{}, r, "expected result round")
 		resultRound := r.(*round.Output)
-		require.IsType(t, &ecdsa.Signature{}, resultRound.Result, "expected taproot signature result")
-		signature := resultRound.Result.(*ecdsa.Signature)
+		require.IsType(t, ecdsa.Signature{}, resultRound.Result, "expected taproot signature result")
+		signature := resultRound.Result.(ecdsa.Signature)
 		assert.True(t, signature.Verify(publicPoint, messageHash), "expected valid signature")
 	}
 }

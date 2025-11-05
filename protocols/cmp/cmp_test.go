@@ -41,8 +41,8 @@ func do(t *testing.T, id party.ID, ids []party.ID, threshold int, message []byte
 
 	signResult, err := h.Result()
 	require.NoError(t, err)
-	require.IsType(t, &ecdsa.Signature{}, signResult)
-	signature := signResult.(*ecdsa.Signature)
+	require.IsType(t, ecdsa.Signature{}, signResult)
+	signature := signResult.(ecdsa.Signature)
 	assert.True(t, signature.Verify(c.PublicPoint(), message))
 }
 
