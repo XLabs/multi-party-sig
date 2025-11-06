@@ -298,13 +298,6 @@ func (x *Broadcast4) UnmarshalContent() (*zkmod.Proof, *zkprm.Proof, error) {
 	return mod, prm, nil
 }
 
-// Broadcast5 is the content type for round 5 broadcast messages.
-// type Broadcast5 struct {
-// 	round.NormalBroadcastContent
-// 	// SchnorrResponse is the Schnorr proof of knowledge of the new secret share
-// 	SchnorrResponse *sch.Response
-// }
-
 func makeBroadcast5(
 	// SchnorrResponse is the Schnorr proof of knowledge of the new secret share
 	schnorrResponse *zksch.Response,
