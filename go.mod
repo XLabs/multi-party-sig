@@ -9,11 +9,11 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/stretchr/testify v1.11.1
-	github.com/xlabs/tss-common v0.0.0-20251105153320-7da4a3182636
+	github.com/xlabs/tss-common v0.0.0-20260106090845-24efe5d8f9c2
 	github.com/zeebo/blake3 v0.2.3
 	golang.org/x/crypto v0.10.0
 	golang.org/x/sync v0.3.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
