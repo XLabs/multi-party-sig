@@ -304,7 +304,7 @@ func (sig ContractSig) Verify(public curve.Point, m []byte) error {
 }
 
 func (s ContractSig) MarshalBinary() ([]byte, error) {
-	b := [contractPkSize + addressSize]byte{}
+	b := [ContractSigSize]byte{}
 	copy(b[:scalarSize], s.S[:])
 	copy(b[scalarSize:], s.Address[:])
 
@@ -322,7 +322,7 @@ func (c *ContractSig) UnmarshalBinary(curve curve.Curve, bts []byte) error {
 }
 
 // SignEcSchnorr creates a Schnorr signature over the given message hash m
-// useful for testing that need to create authentic signatures.
+// useful for tests that need to create similar signatures to this modified FROST implementation.
 func SignEcSchnorr(secret curve.Scalar, m []byte) (Signature, error) {
 	group := secret.Curve()
 
