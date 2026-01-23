@@ -324,7 +324,9 @@ func (c *ContractSig) UnmarshalBinary(curve curve.Curve, bts []byte) error {
 // SignEcSchnorr creates a Schnorr signature over the given message hash m
 // useful for tests that need to create similar signatures to this modified FROST implementation.
 func SignEcSchnorr(secret curve.Scalar, m []byte) (Signature, error) {
-	group := secret.Curve()
+	s := secret.Clone()
+
+	group := s.Curve()
 
 	// k is the first nonce
 	k := sample.Scalar(rand.Reader, group)
@@ -332,13 +334,13 @@ func SignEcSchnorr(secret curve.Scalar, m []byte) (Signature, error) {
 	R := k.ActOnBase() // R == kG.
 
 	// Hash the message and the public key
-	challenge, err := intoEVMCompatibleChallenge(R, secret.ActOnBase(), messageHash(m))
+	challenge, err := intoEVMCompatibleChallenge(R, s.ActOnBase(), messageHash(m))
 	if err != nil {
 		return Signature{}, err
 	}
 
 	// z = k - s_i * c
-	z := k.Sub(secret.Mul(challenge))
+	z := k.Sub(s.Mul(challenge))
 
 	return Signature{
 		R: R,

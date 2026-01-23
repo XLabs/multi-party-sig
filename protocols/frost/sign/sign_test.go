@@ -141,6 +141,15 @@ func TestBasic(t *testing.T) {
 	fmt.Println(consig)
 }
 
+func TestEcSchnorrDoesntMutateSecret(t *testing.T) {
+	secret, _ := genKeyPair(curve.Secp256k1{})
+	expected := secret.Clone()
+	msg := [32]byte{1, 2, 3, 4, 5}
+	_, _ = SignEcSchnorr(secret, msg[:])
+
+	require.True(t, expected.Equal(secret))
+}
+
 func checkOutput(t *testing.T, rounds []round.Session, public curve.Point, m []byte) {
 	for _, r := range rounds {
 		require.IsType(t, &round.Output{}, r, "expected result round")
