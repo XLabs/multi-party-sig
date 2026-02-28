@@ -1,0 +1,65 @@
+package keygen
+
+import (
+	"crypto/rand"
+	"fmt"
+
+	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/math/polynomial"
+	"github.com/xlabs/multi-party-sig/pkg/math/sample"
+	"github.com/xlabs/multi-party-sig/pkg/party"
+	"github.com/xlabs/multi-party-sig/pkg/pool"
+	"github.com/xlabs/multi-party-sig/pkg/protocol"
+	"github.com/xlabs/multi-party-sig/pkg/round"
+	"github.com/xlabs/multi-party-sig/protocols/cmp/config"
+	common "github.com/xlabs/tss-common"
+)
+
+const (
+	Rounds       round.Number = 5
+	ProtocolName              = common.ProtocolECDSADKG
+)
+
+func Start(info round.Info, pl *pool.Pool, c *config.Config) protocol.StartFunc {
+	return func(sessionID []byte) (_ round.Session, err error) {
+		info.TrackingID = &common.TrackingID{}
+		if err := info.TrackingID.FromString(string(sessionID)); err != nil {
+			return nil, fmt.Errorf("sign.Create: invalid sessionID: %w", err)
+		}
+
+		var helper *round.Helper
+		if c == nil {
+			helper, err = round.NewSession(info, sessionID, pl)
+		} else {
+			helper, err = round.NewSession(info, sessionID, pl, c)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("keygen: %w", err)
+		}
+
+		group := helper.Group()
+
+		if c != nil {
+			PublicSharesECDSA := make(map[party.ID]curve.Point, len(c.Public))
+			for id, public := range c.Public {
+				PublicSharesECDSA[id] = public.ECDSA
+			}
+			return &round1{
+				Helper:                    helper,
+				PreviousSecretECDSA:       c.ECDSA,
+				PreviousPublicSharesECDSA: PublicSharesECDSA,
+				PreviousChainKey:          c.ChainKey,
+				VSSSecret:                 polynomial.NewPolynomial(group, helper.Threshold(), group.NewScalar()), // fᵢ(X) deg(fᵢ) = t, fᵢ(0) = 0
+			}, nil
+		}
+
+		// sample fᵢ(X) deg(fᵢ) = t, fᵢ(0) = secretᵢ
+		VSSConstant := sample.Scalar(rand.Reader, group)
+		VSSSecret := polynomial.NewPolynomial(group, helper.Threshold(), VSSConstant)
+		return &round1{
+			Helper:    helper,
+			VSSSecret: VSSSecret,
+		}, nil
+
+	}
+}

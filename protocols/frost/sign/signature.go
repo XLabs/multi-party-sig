@@ -2,6 +2,7 @@ package sign
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/xlabs/multi-party-sig/pkg/eth"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
+	"github.com/xlabs/multi-party-sig/pkg/math/sample"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -46,7 +48,12 @@ type Signature struct {
 	Z curve.Scalar
 }
 
-const contractPkSize = 32
+const (
+	contractPkSize  = 32
+	scalarSize      = 32
+	addressSize     = len(eth.EthAddress{})
+	ContractSigSize = scalarSize + addressSize
+)
 
 var errInvalidPublicKey = fmt.Errorf("public key is not valid for smart contract. must not be over half the curve order")
 
@@ -80,7 +87,7 @@ func marshalPointForContract(p curve.Point) ([]byte, error) {
 	return res, nil
 }
 
-func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error) {
+func (s Signature) ToContractSig() (ContractSig, error) {
 	sigBin, err := s.Z.Curve().MarshalScalar(s.Z)
 	if err != nil {
 		return ContractSig{}, err
@@ -91,18 +98,11 @@ func (s Signature) ToContractSig(pk curve.Point, msg []byte) (ContractSig, error
 		return ContractSig{}, err
 	}
 
-	pkBin, err := marshalPointForContract(pk)
-	if err != nil {
-		return ContractSig{}, err
-	}
-
 	consig := ContractSig{
-		Pk:      [contractPkSize]byte(pkBin),
-		S:       (&big.Int{}).SetBytes(sigBin),
-		M:       (&big.Int{}).SetBytes(msg),
-		R:       s.R,
+		S:       [32]byte{},
 		Address: rAddress,
 	}
+	copy(consig.S[:], sigBin)
 
 	return consig, nil
 }
@@ -169,12 +169,7 @@ func (s *Signature) UnmarshalBinary(curve curve.Curve, bts []byte) error {
 }
 
 type ContractSig struct {
-	Pk [contractPkSize]byte // Pk contains the x-coordinate shifted left by 1 bit with parity in the LSB: (x << 1) | parity
-
-	M *big.Int // Message Hash
-
-	S       *big.Int
-	R       curve.Point
+	S       [32]byte
 	Address eth.EthAddress
 }
 
@@ -197,9 +192,7 @@ func (s ContractSig) String() string {
 	b := strings.Builder{}
 
 	b.WriteString("ContractSig{\n")
-	b.WriteString("  pk                 : 0x" + Bytes2Hex(s.Pk[:]) + "\n")
-	b.WriteString("  msg                : 0x" + Bytes2Hex(LeftPadBytes(s.M.Bytes(), 32)) + "\n")
-	b.WriteString("  s                  : 0x" + Bytes2Hex(LeftPadBytes(s.S.Bytes(), 32)) + "\n")
+	b.WriteString("  s                  : 0x" + Bytes2Hex(LeftPadBytes(s.S[:], 32)) + "\n")
 	b.WriteString("  nonceTimesGAddress : 0x" + Bytes2Hex(s.Address[:]) + "\n")
 	b.WriteString("}\n")
 
@@ -219,7 +212,11 @@ func (sig Signature) Verify(public curve.Point, m []byte) error {
 		return err
 	}
 
-	challenge, err := intoEVMCompatibleChallenge(sig.R, public, messageHash(m))
+	return evmverify(r, sig.Z, public, m)
+}
+
+func evmverify(r eth.EthAddress, z curve.Scalar, public curve.Point, m []byte) error {
+	challenge, err := evmChallenge(r, public, messageHash(m))
 	if err != nil {
 		return err
 	}
@@ -227,7 +224,7 @@ func (sig Signature) Verify(public curve.Point, m []byte) error {
 	// expected := challenge.Act(public) // ePK = -exG?
 	ePK := challenge.Act(public)
 	// expected = expected.Add(sig.R)    // R + exG =? kG + exG == sG
-	sG := sig.Z.ActOnBase() // sG = zG
+	sG := z.ActOnBase() // sG = zG
 
 	actual := ePK.Add(sG) // where  s = k-s_iC.
 	// ePK + sG = e(xG) + (k+xe)G
@@ -249,7 +246,16 @@ func (sig Signature) Verify(public curve.Point, m []byte) error {
 // that is Hash(R,PK, msgDigest). While usually R is nonce * G, in the case of smart contracts,
 // R is an eth address (so we can use it with the ecrecover function in EVM.).
 func intoEVMCompatibleChallenge(R, pk curve.Point, msgHash []byte) (curve.Scalar, error) {
-	sumhash, err := challengeHash(R, pk, msgHash)
+	addressR, err := eth.PointToAddress(R)
+	if err != nil {
+		return nil, err
+	}
+
+	return evmChallenge(addressR, pk, msgHash)
+}
+
+func evmChallenge(addressR eth.EthAddress, pk curve.Point, msgHash []byte) (curve.Scalar, error) {
+	sumhash, err := challengeHash(addressR, pk, msgHash)
 	if err != nil {
 		return nil, err
 	}
@@ -262,15 +268,10 @@ func intoEVMCompatibleChallenge(R, pk curve.Point, msgHash []byte) (curve.Scalar
 
 // Used to create the challenge scalar for schnorr signatures.
 // outputs H(R, pk, msgDigest)
-func challengeHash(R curve.Point, pk curve.Point, msgHash []byte) ([]byte, error) {
+func challengeHash(addressR eth.EthAddress, pk curve.Point, msgHash []byte) ([]byte, error) {
 	hsh := sha3.NewLegacyKeccak256()
 
 	pkbts, err := marshalPointForContract(pk)
-	if err != nil {
-		return nil, err
-	}
-
-	addressR, err := eth.PointToAddress(R)
 	if err != nil {
 		return nil, err
 	}
@@ -288,4 +289,61 @@ func challengeHash(R curve.Point, pk curve.Point, msgHash []byte) ([]byte, error
 	}
 
 	return hsh.Sum(nil), nil
+}
+
+// contractSig functionality:
+
+func (sig ContractSig) Verify(public curve.Point, m []byte) error {
+	c := public.Curve()
+	z, err := c.UnmarshalScalar(sig.S[:])
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal signature scalar: %w", err)
+	}
+
+	return evmverify(sig.Address, z, public, m)
+}
+
+func (s ContractSig) MarshalBinary() ([]byte, error) {
+	b := [ContractSigSize]byte{}
+	copy(b[:scalarSize], s.S[:])
+	copy(b[scalarSize:], s.Address[:])
+
+	return b[:], nil
+}
+
+func (c *ContractSig) UnmarshalBinary(curve curve.Curve, bts []byte) error {
+	if len(bts) != ContractSigSize {
+		return fmt.Errorf("invalid length for ContractSig binary: expected %d bytes, got %d", ContractSigSize, len(bts))
+	}
+
+	copy(c.S[:], bts[:scalarSize])
+	copy(c.Address[:], bts[scalarSize:ContractSigSize])
+	return nil
+}
+
+// SignEcSchnorr creates a Schnorr signature over the given message hash m
+// useful for tests that need to create similar signatures to this modified FROST implementation.
+func SignEcSchnorr(secret curve.Scalar, m []byte) (Signature, error) {
+	s := secret.Clone()
+
+	group := s.Curve()
+
+	// k is the first nonce
+	k := sample.Scalar(rand.Reader, group)
+
+	R := k.ActOnBase() // R == kG.
+
+	// Hash the message and the public key
+	challenge, err := intoEVMCompatibleChallenge(R, s.ActOnBase(), messageHash(m))
+	if err != nil {
+		return Signature{}, err
+	}
+
+	// z = k - s_i * c
+	z := k.Sub(s.Mul(challenge))
+
+	return Signature{
+		R: R,
+		Z: z,
+	}, nil
 }

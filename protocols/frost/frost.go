@@ -3,6 +3,7 @@ package frost
 import (
 	"fmt"
 
+	"github.com/xlabs/multi-party-sig/internal/types"
 	"github.com/xlabs/multi-party-sig/pkg/math/curve"
 	"github.com/xlabs/multi-party-sig/pkg/party"
 	"github.com/xlabs/multi-party-sig/pkg/protocol"
@@ -147,30 +148,13 @@ var (
 // used to convert a common.SignatureData to a  frost.Signature.
 // frost signature can be turned to contractSignature which can be used by ethereum contracts.
 func Secp256k1SignatureTranslate(sig *common.SignatureData) (Signature, error) {
-	if sig == nil {
-		return Signature{}, ErrNilSignatureData
-	}
-	if sig.S == nil {
-		return Signature{}, ErrEmptySignatureS
-	}
-	if sig.R == nil {
-		return Signature{}, ErrEmptySignatureR
-	}
-
-	group := curve.Secp256k1{}
-
-	z, err := group.UnmarshalScalar(sig.S)
+	sigstruct, err := types.CommonSignatureDataTranslate(sig, curve.Secp256k1{})
 	if err != nil {
-		return Signature{}, fmt.Errorf("failed to unmarshal S: %w", err)
-	}
-
-	R, err := group.UnmarshalPoint(sig.R)
-	if err != nil {
-		return Signature{}, fmt.Errorf("failed to unmarshal R: %w", err)
+		return Signature{}, err
 	}
 
 	return Signature{
-		R: R,
-		Z: z,
+		R: sigstruct.R,
+		Z: sigstruct.S,
 	}, nil
 }

@@ -21,38 +21,7 @@ import (
 	"github.com/xlabs/multi-party-sig/pkg/round"
 	"github.com/xlabs/multi-party-sig/pkg/taproot"
 	"github.com/xlabs/multi-party-sig/protocols/frost/keygen"
-	common "github.com/xlabs/tss-common"
 )
-
-var testTrackid = &common.TrackingID{
-	Digest:        []byte{1, 2, 3, 4},
-	Protocol:      uint32(common.ProtocolFROSTSign.ToInt()),
-	PartiesState:  []byte{},
-	AuxiliaryData: []byte{},
-}
-
-func SignEcSchnorr(secret curve.Scalar, m []byte) Signature {
-	group := secret.Curve()
-
-	// k is the first nonce
-	k := sample.Scalar(rand.Reader, group)
-
-	R := k.ActOnBase() // R == kG.
-
-	// Hash the message and the public key
-	challenge, err := intoEVMCompatibleChallenge(R, secret.ActOnBase(), messageHash(m))
-	if err != nil {
-		panic(err)
-	}
-
-	// z = k - s_i * c
-	z := k.Sub(secret.Mul(challenge))
-
-	return Signature{
-		R: R,
-		Z: z,
-	}
-}
 
 // ensures that the we correctly turn secp256k1 points into eth addresses
 func TestPointToAddressCorrect(t *testing.T) {
@@ -100,7 +69,10 @@ func TestChallengeMaking(t *testing.T) {
 	t.Skip("this test is not relevant, until we receive a smart contract we can match it against.")
 	_, pk := genSpecificKeyPair(t)
 
-	c, err := challengeHash(pk, pk, []byte{1, 2, 3, 4, 5})
+	addressR, err := eth.PointToAddress(pk)
+	require.NoError(t, err)
+
+	c, err := challengeHash(addressR, pk, []byte{1, 2, 3, 4, 5})
 	require.NoError(t, err)
 
 	expected := "b9cb68e0791880df291cc7dc095320abf9905f81f7f3f587fade4fb192b2bfd6"
@@ -111,7 +83,11 @@ func TestChallengeMaking(t *testing.T) {
 	two := (&saferith.Nat{}).SetUint64(2)
 	sk2 := curve.Secp256k1{}.NewScalar().SetNat(two)
 	R := sk2.ActOnBase()
-	c, err = challengeHash(R, pk, []byte{1, 2, 3, 4, 5})
+
+	addressR, err = eth.PointToAddress(R)
+	require.NoError(t, err)
+
+	c, err = challengeHash(addressR, pk, []byte{1, 2, 3, 4, 5})
 	require.NoError(t, err)
 
 	expected = "f7dcf73cfaaff1f2f43d6755ad4f99ea192cfeee77595fcace118270713174b7"
@@ -151,13 +127,27 @@ func TestBasic(t *testing.T) {
 
 	msgHash := [32]byte{1, 2, 3, 4, 5}
 
-	sig := SignEcSchnorr(secret, msgHash[:])
-	assert.NoError(t, sig.Verify(public, msgHash[:]), "expected valid signature")
+	sig, err := SignEcSchnorr(secret, msgHash[:])
+	require.NoError(t, err)
 
-	consig, err := sig.ToContractSig(public, msgHash[:])
+	assert.NoError(t, sig.Verify(public, msgHash[:]), "expected valid signature")
+	c, err := sig.ToContractSig()
+	require.NoError(t, err)
+	require.NoError(t, c.Verify(public, msgHash[:]), "expected valid contract signature")
+
+	consig, err := sig.ToContractSig()
 	assert.NoError(t, err, "expected valid contract signature")
 
 	fmt.Println(consig)
+}
+
+func TestEcSchnorrDoesntMutateSecret(t *testing.T) {
+	secret, _ := genKeyPair(curve.Secp256k1{})
+	expected := secret.Clone()
+	msg := [32]byte{1, 2, 3, 4, 5}
+	_, _ = SignEcSchnorr(secret, msg[:])
+
+	require.True(t, expected.Equal(secret))
 }
 
 func checkOutput(t *testing.T, rounds []round.Session, public curve.Point, m []byte) {
@@ -167,13 +157,17 @@ func checkOutput(t *testing.T, rounds []round.Session, public curve.Point, m []b
 		require.IsType(t, Signature{}, resultRound.Result, "expected signature result")
 		signature := resultRound.Result.(Signature)
 		assert.NoError(t, signature.Verify(public, m), "expected valid signature")
+
+		c, err := signature.ToContractSig()
+		require.NoError(t, err)
+		require.NoError(t, c.Verify(public, m), "expected valid contract signature")
 	}
 
 	r := rounds[0]
 	resultRound := r.(*round.Output)
 	signature := resultRound.Result.(Signature)
 
-	res, err := signature.ToContractSig(public, m)
+	res, err := signature.ToContractSig()
 	require.NoError(t, err, "expected valid contract signature")
 	fmt.Println(res)
 }
@@ -221,7 +215,7 @@ func TestSign(t *testing.T) {
 		// ensuring shuffling the order of party IDs doesn't affect signing process.
 		shuffledIds := shuffleIds(partyIDs)
 
-		r, err := StartSignCommon(false, result, shuffledIds, steak[:])(testTrackid.ToByteString())
+		r, err := StartSignCommon(false, result, shuffledIds, steak[:])(test.TestTrackingID.ToByteString())
 		require.NoError(t, err, "round creation should not result in an error")
 		rounds = append(rounds, r)
 	}
@@ -316,7 +310,7 @@ func TestSignTaproot(t *testing.T) {
 			PublicKey:          tapRootPublicKey,
 			VerificationShares: party.NewPointMap(genericVerificationShares),
 		}
-		r, err := StartSignCommon(true, normalResult, partyIDs, steak)(testTrackid.ToByteString())
+		r, err := StartSignCommon(true, normalResult, partyIDs, steak)(test.TestTrackingID.ToByteString())
 		require.NoError(t, err, "round creation should not result in an error")
 		rounds = append(rounds, r)
 	}
@@ -350,8 +344,14 @@ func TestSigMarshal(t *testing.T) {
 
 	msgHash := [32]byte{1, 2, 3, 4, 5}
 
-	sig := SignEcSchnorr(secret, msgHash[:])
+	sig, err := SignEcSchnorr(secret, msgHash[:])
+	require.NoError(t, err)
+
 	assert.NoError(t, sig.Verify(public, msgHash[:]), "expected valid signature")
+
+	c, err := sig.ToContractSig()
+	require.NoError(t, err)
+	require.NoError(t, c.Verify(public, msgHash[:]), "expected valid contract signature")
 
 	// Marshal the signature to bytes
 	bts, err := sig.MarshalBinary()
@@ -367,6 +367,15 @@ func TestSigMarshal(t *testing.T) {
 
 	// Verify that the unmarshalled signature is valid
 	assert.NoError(t, unmarshalledSig.Verify(public, msgHash[:]), "expected valid unmarshalled signature")
+
+	bts, err = c.MarshalBinary()
+	require.NoError(t, err)
+
+	fmt.Printf("Marshalled contract signature: %x\n", bts)
+
+	unmarshalledC := ContractSig{}
+	require.NoError(t, unmarshalledC.UnmarshalBinary(curve.Secp256k1{}, bts))
+	require.NoError(t, unmarshalledC.Verify(public, msgHash[:]), "expected valid unmarshalled contract signature")
 }
 
 func shuffleIds(partyIDs []party.ID) []party.ID {

@@ -1,0 +1,57 @@
+syntax = "proto3";
+package xlabs.cmp.sign;
+option go_package = "protocols/cmp/sign";
+
+
+message Broadcast2{
+	// K = Kᵢ
+    bytes K = 1;
+	// G = Gᵢ
+    bytes G = 2;
+}
+
+message Message2{
+	bytes ProofEnc =1; // *zkenc.Proof
+}
+
+message Broadcast3 {
+	// BigGammaShare = Γⱼ; a curve.Point 
+	bytes BigGammaShare = 1;
+}
+
+message Message3{
+	// DeltaBeta   *paillier.Ciphertext // DeltaBeta = βᵢⱼ
+	bytes DeltaBeta = 1;
+	// ChiBeta     *paillier.Ciphertext // ChiBeta = β̂ᵢⱼ
+	bytes ChiBeta = 2;
+	// DeltaD      *paillier.Ciphertext // DeltaD = Dᵢⱼ
+	bytes DeltaD = 3;
+	// DeltaF     *paillier.Ciphertext // DeltaF = Fᵢⱼ
+	bytes DeltaF = 4;
+	// DeltaProof *zkaffg.Proof
+	bytes DeltaProof = 5;
+	// ChiD       *paillier.Ciphertext // DeltaD = D̂_{ij}
+	bytes ChiD = 6;
+	// ChiF       *paillier.Ciphertext // ChiF = F̂ᵢⱼ
+	bytes ChiF = 7;
+	// ChiProof   *zkaffg.Proof
+	bytes ChiProof = 8;
+	// ProofLog   *zklogstar.Proof
+	bytes ProofLog = 9;
+}
+
+
+message Message4 {
+	bytes ProofLog =1; // *zklogstar.Proof
+}
+
+message Broadcast4 {
+	// DeltaShare = δⱼ
+	bytes DeltaShare = 1; // curve.Scalar
+	// BigDeltaShare = Δⱼ = [kⱼ]•Γⱼ
+	bytes BigDeltaShare = 2; // curve.Point
+}
+
+message Broadcast5{
+	bytes SigmaShare =1;// curve.Scalar
+}

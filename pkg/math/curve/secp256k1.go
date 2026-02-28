@@ -254,7 +254,9 @@ func (s *Secp256k1Scalar) SetNat(x *saferith.Nat) Scalar {
 }
 
 func (s *Secp256k1Scalar) Act(that Point) Point {
-	other := secp256k1CastPoint(that)
+	// Since ToAffine modifes the point, we clone it here to avoid side effects.
+	// (for instance, race conditions)
+	other := secp256k1CastPoint(that.Clone())
 	other.value.ToAffine()
 
 	out := new(Secp256k1Point)
